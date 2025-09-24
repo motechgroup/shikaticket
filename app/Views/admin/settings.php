@@ -1,0 +1,145 @@
+<?php /** @var array $settings */ ?>
+<div class="max-w-4xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-semibold mb-6">Site Settings</h1>
+    <form method="post" enctype="multipart/form-data" action="<?php echo base_url('/admin/settings'); ?>" class="space-y-6 card p-6">
+		<?php echo csrf_field(); ?>
+        <div>
+            <label class="block text-sm mb-1">Site Name</label>
+            <input name="site_name" value="<?php echo htmlspecialchars($settings['site.name'] ?? 'Ticko'); ?>" class="input">
+        </div>
+        <div>
+            <label class="block text-sm mb-1">Site Description</label>
+            <textarea name="site_description" class="textarea" rows="2"><?php echo htmlspecialchars($settings['site.description'] ?? ''); ?></textarea>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm mb-1">Logo</label>
+                <input type="file" name="site_logo" accept="image/*" class="input">
+                <div class="text-xs text-gray-400 mt-1">PNG/SVG preferred. Displays in header/footer.</div>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Favicon</label>
+                <input type="file" name="site_favicon" accept="image/*" class="input">
+                <div class="text-xs text-gray-400 mt-1">Square image, e.g., 64x64.</div>
+            </div>
+        </div>
+
+        <!-- SMTP EMAIL SECTION -->
+        <div class="border-t pt-6">
+            <h2 class="font-semibold mb-3">SMTP (Email)</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <input class="input" name="smtp_host" placeholder="SMTP Host" value="<?php echo htmlspecialchars($settings['smtp.host'] ?? ''); ?>">
+                <input class="input" name="smtp_port" placeholder="Port" value="<?php echo htmlspecialchars($settings['smtp.port'] ?? '587'); ?>">
+                <input class="input" name="smtp_username" placeholder="Username" value="<?php echo htmlspecialchars($settings['smtp.username'] ?? ''); ?>">
+                <input class="input" type="password" name="smtp_password" placeholder="Password" value="<?php echo htmlspecialchars($settings['smtp.password'] ?? ''); ?>">
+                <select class="select" name="smtp_encryption">
+                    <option value="tls" <?php echo (($settings['smtp.encryption'] ?? 'tls') === 'tls') ? 'selected' : ''; ?>>TLS</option>
+                    <option value="ssl" <?php echo (($settings['smtp.encryption'] ?? 'tls') === 'ssl') ? 'selected' : ''; ?>>SSL</option>
+                    <option value="none" <?php echo (($settings['smtp.encryption'] ?? 'tls') === 'none') ? 'selected' : ''; ?>>None</option>
+                </select>
+                <input class="input" name="smtp_from_email" placeholder="From Email" value="<?php echo htmlspecialchars($settings['smtp.from_email'] ?? ''); ?>">
+                <input class="input" name="smtp_from_name" placeholder="From Name" value="<?php echo htmlspecialchars($settings['smtp.from_name'] ?? 'Ticko'); ?>">
+            </div>
+            <div class="mt-6">
+                <a class="btn btn-secondary" href="<?php echo base_url('/admin/email-templates'); ?>">Manage Email Templates</a>
+            </div>
+        </div>
+
+        <!-- Twilio SMS SECTION -->
+        <div class="border-t pt-6">
+            <h2 class="font-semibold mb-3">Twilio (SMS)</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <input class="input" name="twilio_sid" placeholder="Account SID" value="<?php echo htmlspecialchars($settings['twilio.sid'] ?? ''); ?>">
+                <input class="input" name="twilio_token" placeholder="Auth Token" value="<?php echo htmlspecialchars($settings['twilio.token'] ?? ''); ?>">
+                <input class="input sm:col-span-2" name="twilio_from" placeholder="From Number (e.g. +1234567890)" value="<?php echo htmlspecialchars($settings['twilio.from'] ?? ''); ?>">
+            </div>
+        </div>
+
+        <!-- SMS Provider Selection -->
+        <div class="border-t pt-6">
+            <h2 class="font-semibold mb-3">SMS Provider</h2>
+            <select class="select" name="sms_provider">
+                <?php $currentProvider = $settings['sms.provider'] ?? 'twilio'; ?>
+                <option value="twilio" <?php echo $currentProvider==='twilio'?'selected':''; ?>>Twilio</option>
+                <option value="textsms" <?php echo $currentProvider==='textsms'?'selected':''; ?>>TextSMS (Kenya)</option>
+            </select>
+        </div>
+
+        <!-- TextSMS SECTION -->
+        <div class="border-t pt-6">
+            <h2 class="font-semibold mb-3">TextSMS (Kenya)</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <input class="input" name="textsms_api_key" placeholder="API Key" value="<?php echo htmlspecialchars($settings['textsms.api_key'] ?? ''); ?>">
+                <input class="input" name="textsms_partner_id" placeholder="Partner ID" value="<?php echo htmlspecialchars($settings['textsms.partner_id'] ?? ''); ?>">
+                <input class="input" name="textsms_shortcode" placeholder="Sender ID / Shortcode" value="<?php echo htmlspecialchars($settings['textsms.shortcode'] ?? ''); ?>">
+                <input class="input" name="textsms_domain" placeholder="Domain (sms.textsms.co.ke)" value="<?php echo htmlspecialchars($settings['textsms.domain'] ?? 'sms.textsms.co.ke'); ?>">
+            </div>
+            <div class="text-xs text-gray-400 mt-2">Docs: <a class="link" target="_blank" href="https://textsms.co.ke/bulk-sms-api/">TextSMS Bulk SMS API</a></div>
+        </div>
+
+        <!-- PAYMENTS SECTION -->
+        <div class="border-t pt-6">
+			<h2 class="font-semibold mb-3">Payments</h2>
+            <div class="space-y-4">
+                <!-- MPESA -->
+                <div class="p-4 rounded border border-gray-700 bg-[#0f0f10]">
+					<div class="flex items-center justify-between">
+						<h3 class="font-semibold">M-Pesa (STK Push)</h3>
+						<label class="inline-flex items-center gap-2 text-sm">
+							<input type="checkbox" name="payments_mpesa_enabled" <?php echo (($settings['payments.mpesa.enabled'] ?? '0') === '1') ? 'checked' : ''; ?>> Enable
+						</label>
+					</div>
+					<div class="grid sm:grid-cols-2 gap-4 mt-3">
+						<input class="input" name="mpesa_consumer_key" placeholder="Consumer Key" value="<?php echo htmlspecialchars($settings['payments.mpesa.consumer_key'] ?? ''); ?>">
+						<input class="input" name="mpesa_consumer_secret" placeholder="Consumer Secret" value="<?php echo htmlspecialchars($settings['payments.mpesa.consumer_secret'] ?? ''); ?>">
+						<input class="input" name="mpesa_shortcode" placeholder="Shortcode" value="<?php echo htmlspecialchars($settings['payments.mpesa.shortcode'] ?? ''); ?>">
+						<input class="input" name="mpesa_passkey" placeholder="Lipa Na M-Pesa Passkey" value="<?php echo htmlspecialchars($settings['payments.mpesa.passkey'] ?? ''); ?>">
+						<select class="select" name="mpesa_env">
+							<option value="sandbox" <?php echo (($settings['payments.mpesa.env'] ?? 'sandbox') === 'sandbox') ? 'selected' : ''; ?>>Sandbox</option>
+							<option value="production" <?php echo (($settings['payments.mpesa.env'] ?? 'sandbox') === 'production') ? 'selected' : ''; ?>>Production</option>
+						</select>
+						<input class="input" name="mpesa_callback_url" placeholder="Callback URL (https)" value="<?php echo htmlspecialchars($settings['payments.mpesa.callback_url'] ?? ''); ?>">
+					</div>
+				</div>
+
+                <!-- PAYPAL -->
+                <div class="p-4 rounded border border-gray-700 bg-[#0f0f10]">
+					<div class="flex items-center justify-between">
+						<h3 class="font-semibold">PayPal</h3>
+						<label class="inline-flex items-center gap-2 text-sm">
+							<input type="checkbox" name="payments_paypal_enabled" <?php echo (($settings['payments.paypal.enabled'] ?? '0') === '1') ? 'checked' : ''; ?>> Enable
+						</label>
+					</div>
+					<div class="grid sm:grid-cols-2 gap-4 mt-3">
+						<input class="input" name="paypal_client_id" placeholder="Client ID" value="<?php echo htmlspecialchars($settings['payments.paypal.client_id'] ?? ''); ?>">
+						<input class="input" name="paypal_secret" placeholder="Secret" value="<?php echo htmlspecialchars($settings['payments.paypal.secret'] ?? ''); ?>">
+						<select class="select" name="paypal_env">
+							<option value="sandbox" <?php echo (($settings['payments.paypal.env'] ?? 'sandbox') === 'sandbox') ? 'selected' : ''; ?>>Sandbox</option>
+							<option value="production" <?php echo (($settings['payments.paypal.env'] ?? 'sandbox') === 'production') ? 'selected' : ''; ?>>Production</option>
+						</select>
+					</div>
+				</div>
+
+                <!-- FLUTTERWAVE -->
+                <div class="p-4 rounded border border-gray-700 bg-[#0f0f10]">
+					<div class="flex items-center justify-between">
+						<h3 class="font-semibold">Flutterwave</h3>
+						<label class="inline-flex items-center gap-2 text-sm">
+							<input type="checkbox" name="payments_flutterwave_enabled" <?php echo (($settings['payments.flutterwave.enabled'] ?? '0') === '1') ? 'checked' : ''; ?>> Enable
+						</label>
+					</div>
+					<div class="grid sm:grid-cols-3 gap-4 mt-3">
+						<input class="input" name="flutterwave_public_key" placeholder="Public Key" value="<?php echo htmlspecialchars($settings['payments.flutterwave.public_key'] ?? ''); ?>">
+						<input class="input" name="flutterwave_secret_key" placeholder="Secret Key" value="<?php echo htmlspecialchars($settings['payments.flutterwave.secret_key'] ?? ''); ?>">
+						<input class="input" name="flutterwave_encryption_key" placeholder="Encryption Key" value="<?php echo htmlspecialchars($settings['payments.flutterwave.encryption_key'] ?? ''); ?>">
+					</div>
+				</div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary">Save</button>
+    </form>
+
+</div>
+
+
