@@ -39,6 +39,8 @@ $router->get('/tickets/view', 'TicketsController@view');
 $router->get('/organizers/show', 'OrganizersController@show');
 $router->post('/organizers/follow', 'OrganizersController@follow');
 $router->post('/organizers/unfollow', 'OrganizersController@unfollow');
+$router->get('/help', 'DocsController@index');
+$router->get('/help/show', 'DocsController@show');
 
 // User Auth (phone-based login)
 $router->get('/login', 'AuthController@loginUserForm');
