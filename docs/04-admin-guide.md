@@ -1,7 +1,7 @@
 # Admin Guide
 
 ## Login
-- `/admin` (default admin@example.com / admin123) — change in Admin > Profile.
+- `/admin` — credentials are controlled by your organization. Do not publish them publicly.
 
 ## Dashboard
 - Paid orders, gross revenue, platform commission total, pending withdrawals, recent SMS logs.

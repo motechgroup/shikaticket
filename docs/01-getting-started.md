@@ -14,7 +14,7 @@
 ## Roles & Logins
 - User: registers with phone/email
 - Organizer: registers with email; requires approval and phone OTP
-- Admin: `/admin` (default admin@example.com / admin123)
+- Admin: `/admin` (credentials are managed privately by your organization)
 
 ## Important URLs
 - Home `/`
