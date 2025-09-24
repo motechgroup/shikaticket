@@ -1,7 +1,7 @@
 <?php /** @var array $orders */ /** @var array $byCurrency */ /** @var array $pendingWithdrawals */ ?>
 <div class="max-w-6xl mx-auto px-4 py-10">
 	<h1 class="text-2xl font-semibold mb-6">Admin Dashboard</h1>
-	<div class="grid sm:grid-cols-3 gap-6 mb-6">
+	<div class="grid sm:grid-cols-4 gap-6 mb-6">
 		<div class="card p-6">
 			<div class="text-sm text-gray-400">Paid Orders</div>
 			<div class="text-2xl font-semibold"><?php echo (int)($orders['total_orders'] ?? 0); ?></div>
@@ -17,6 +17,10 @@
 				<li><?php echo htmlspecialchars($row['currency']); ?>: <?php echo number_format((float)$row['gross'], 2); ?></li>
 				<?php endforeach; ?>
 			</ul>
+		</div>
+		<div class="card p-6">
+			<div class="text-sm text-gray-400">Platform Commission</div>
+			<div class="text-2xl font-semibold">KES <?php echo number_format((float)($commissionRevenue ?? 0), 2); ?></div>
 		</div>
 	</div>
 

@@ -12,7 +12,13 @@ class AdminController
         $orders = db()->query("SELECT COUNT(*) AS total_orders, SUM(total_amount) AS gross FROM orders WHERE status='paid'")->fetch();
         $byCurrency = db()->query("SELECT currency, SUM(total_amount) AS gross FROM orders WHERE status='paid' GROUP BY currency")->fetchAll();
         $pendingWithdrawals = db()->query("SELECT w.*, o.full_name FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id WHERE w.status='requested' ORDER BY w.created_at DESC")->fetchAll();
-        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals'));
+        // Platform revenue from commissions
+        $commissionRevenue = 0.0;
+        try {
+            $rows = db()->query("SELECT e.organizer_id, o.commission_percent, SUM(oi.quantity*oi.unit_price) AS gross FROM order_items oi JOIN orders ord ON ord.id=oi.order_id AND ord.status='paid' JOIN events e ON e.id=oi.event_id JOIN organizers o ON o.id=e.organizer_id GROUP BY e.organizer_id, o.commission_percent")->fetchAll();
+            foreach ($rows as $r) { $commissionRevenue += ((float)($r['commission_percent'] ?? 0) / 100.0) * (float)($r['gross'] ?? 0); }
+        } catch (\Throwable $e) {}
+        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue'));
 	}
 
 	public function loginForm(): void
@@ -487,6 +493,22 @@ class AdminController
             Setting::set('site.favicon', 'uploads/site/' . $filename);
         }
 
+        // SEO
+        Setting::set('seo.meta_title', trim($_POST['seo_meta_title'] ?? ''));
+        Setting::set('seo.meta_description', trim($_POST['seo_meta_description'] ?? ''));
+        Setting::set('seo.meta_keywords', trim($_POST['seo_meta_keywords'] ?? ''));
+        Setting::set('seo.meta_robots', trim($_POST['seo_meta_robots'] ?? 'index,follow'));
+        Setting::set('seo.twitter', trim($_POST['seo_twitter'] ?? ''));
+        if (!empty($_FILES['seo_og_image']['tmp_name'])) {
+            $ext = pathinfo($_FILES['seo_og_image']['name'], PATHINFO_EXTENSION);
+            $destDir = __DIR__ . '/../../public/uploads/site';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+            $filename = 'og_' . time() . '.' . $ext;
+            $dest = $destDir . '/' . $filename;
+            move_uploaded_file($_FILES['seo_og_image']['tmp_name'], $dest);
+            Setting::set('seo.og_image', 'uploads/site/' . $filename);
+        }
+
         // SMTP
         Setting::set('smtp.host', trim($_POST['smtp_host'] ?? ''));
         Setting::set('smtp.port', trim($_POST['smtp_port'] ?? '587'));
@@ -572,6 +594,54 @@ class AdminController
         view('admin/partners', compact('partners'));
     }
 
+    public function withdrawalsIndex(): void
+    {
+        require_admin();
+        $q = trim($_GET['q'] ?? '');
+        $where = '';
+        $params = [];
+        if ($q !== '') {
+            $where = 'WHERE (w.status LIKE ? OR o.full_name LIKE ?)';
+            $like = '%' . $q . '%';
+            $params = [$like, $like];
+        }
+        $stmt = db()->prepare('SELECT w.*, o.full_name, o.phone FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id ' . $where . ' ORDER BY w.created_at DESC');
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+        view('admin/withdrawals', ['withdrawals' => $rows, 'q' => $q]);
+    }
+
+    public function withdrawalsUpdate(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        $status = trim($_POST['status'] ?? 'requested');
+        if ($id > 0) {
+            db()->prepare('UPDATE withdrawals SET status = ?, updated_at = CASE WHEN ? IN ("approved","paid","rejected") THEN NOW() ELSE updated_at END WHERE id = ?')
+              ->execute([$status, $status, $id]);
+            // send SMS to organizer
+            try {
+                $row = db()->prepare('SELECT w.amount, o.phone FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id WHERE w.id = ?');
+                $row->execute([$id]);
+                $data = $row->fetch();
+                $phone = $data['phone'] ?? '';
+                if ($phone) {
+                    $sms = new \App\Services\Sms();
+                    if ($sms->isConfigured()) {
+                        $tplKey = 'withdrawal_' . $status; // e.g., withdrawal_approved
+                        $body = \App\Services\SmsTemplates::render($tplKey, [
+                            'amount' => number_format((float)($data['amount'] ?? 0), 2),
+                            'status' => $status,
+                        ]);
+                        if ($body === '') { $body = 'Withdrawal ' . $status . ' for KES ' . number_format((float)($data['amount'] ?? 0), 2); }
+                        $sms->send($phone, $body);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+        redirect(base_url('/admin/withdrawals'));
+    }
+
     public function partnerStatus(): void
     {
         require_admin();
@@ -622,6 +692,91 @@ class AdminController
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) { db()->prepare('DELETE FROM pages WHERE id = ?')->execute([$id]); }
         redirect(base_url('/admin/pages'));
+    }
+
+    public function partnerLogos(): void
+    {
+        require_admin();
+        $rows = db()->query('SELECT * FROM partner_logos ORDER BY sort_order ASC, created_at DESC')->fetchAll();
+        view('admin/partner_logos', ['logos' => $rows]);
+    }
+
+    public function partnerLogosCreate(): void
+    {
+        require_admin();
+        view('admin/partner_logos_create');
+    }
+
+    public function partnerLogosStore(): void
+    {
+        require_admin();
+        $title = trim($_POST['title'] ?? '');
+        $link = trim($_POST['link_url'] ?? '');
+        $sort = (int)($_POST['sort_order'] ?? 0);
+        $imagePath = '';
+        if (!empty($_FILES['image']['tmp_name'])) {
+            [$w,$h] = @getimagesize($_FILES['image']['tmp_name']) ?: [0,0];
+            if ($w < 100 || $h < 50) { flash_set('error','Logo too small'); redirect(base_url('/admin/partner-logos/create')); }
+            $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $destDir = __DIR__ . '/../../public/uploads/partners';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+            $filename = 'partner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
+            $dest = $destDir . '/' . $filename;
+            move_uploaded_file($_FILES['image']['tmp_name'], $dest);
+            $imagePath = 'uploads/partners/' . $filename;
+        }
+        db()->prepare('INSERT INTO partner_logos (title, image_path, link_url, sort_order, is_active) VALUES (?, ?, ?, ?, 1)')->execute([$title, $imagePath, $link, $sort]);
+        redirect(base_url('/admin/partner-logos'));
+    }
+
+    public function partnerLogosDelete(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) { db()->prepare('DELETE FROM partner_logos WHERE id = ?')->execute([$id]); }
+        redirect(base_url('/admin/partner-logos'));
+    }
+
+    public function partnerLogosEdit(): void
+    {
+        require_admin();
+        $id = (int)($_GET['id'] ?? 0);
+        $stmt = db()->prepare('SELECT * FROM partner_logos WHERE id = ?');
+        $stmt->execute([$id]);
+        $logo = $stmt->fetch();
+        if (!$logo) { redirect(base_url('/admin/partner-logos')); }
+        view('admin/partner_logos_edit', compact('logo'));
+    }
+
+    public function partnerLogosUpdate(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $link = trim($_POST['link_url'] ?? '');
+        $sort = (int)($_POST['sort_order'] ?? 0);
+        $setImg = '';
+        if (!empty($_FILES['image']['tmp_name'])) {
+            $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $destDir = __DIR__ . '/../../public/uploads/partners';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+            $filename = 'partner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
+            $dest = $destDir . '/' . $filename;
+            move_uploaded_file($_FILES['image']['tmp_name'], $dest);
+            $setImg = ', image_path = ' . db()->quote('uploads/partners/' . $filename);
+        }
+        $sql = 'UPDATE partner_logos SET title=:t, link_url=:l, sort_order=:s' . $setImg . ' WHERE id=:id';
+        db()->prepare($sql)->execute([':t'=>$title, ':l'=>$link, ':s'=>$sort, ':id'=>$id]);
+        redirect(base_url('/admin/partner-logos'));
+    }
+
+    public function partnerLogosToggle(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        $active = (int)($_POST['is_active'] ?? 1);
+        if ($id > 0) { db()->prepare('UPDATE partner_logos SET is_active = ? WHERE id = ?')->execute([$active, $id]); }
+        redirect(base_url('/admin/partner-logos'));
     }
 }
 

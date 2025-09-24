@@ -12,7 +12,32 @@
 		</div>
 		<div class="md:col-span-2">
 			<h1 class="text-3xl font-semibold"><?php echo htmlspecialchars($event['title']); ?></h1>
-			<p class="text-gray-400 mt-1"><?php echo htmlspecialchars($event['venue']); ?> • <?php echo htmlspecialchars(($event['event_date'] ?? '') . ' ' . ($event['event_time'] ?? '')); ?></p>
+			<?php 
+			$orgRow = null; 
+			try { if (!empty($event['organizer_id'])) { $q=db()->prepare('SELECT id, full_name FROM organizers WHERE id = ?'); $q->execute([(int)$event['organizer_id']]); $orgRow=$q->fetch(); } } catch (\Throwable $e) {}
+			?>
+			<p class="text-gray-400 mt-1">
+				<?php echo htmlspecialchars($event['venue']); ?> • <?php echo htmlspecialchars(($event['event_date'] ?? '') . ' ' . ($event['event_time'] ?? '')); ?>
+				<?php if ($orgRow): ?>
+					• by <a class="link" href="<?php echo base_url('/organizers/show?id='.(int)$orgRow['id']); ?>"><?php echo htmlspecialchars($orgRow['full_name']); ?></a>
+				<?php endif; ?>
+			</p>
+			<div class="flex flex-wrap gap-2 mt-3">
+				<?php $shareUrl = base_url('events/show?id='.(int)$event['id']); $shareText = $event['title'].' - '.$event['venue']; ?>
+				<button id="btnShare" class="btn btn-secondary">Share</button>
+				<a class="btn btn-secondary" target="_blank" href="https://wa.me/?text=<?php echo rawurlencode($shareText.' '.$shareUrl); ?>">WhatsApp</a>
+				<a class="btn btn-secondary" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=<?php echo rawurlencode($shareUrl); ?>">Facebook</a>
+				<a class="btn btn-secondary" target="_blank" href="https://twitter.com/intent/tweet?url=<?php echo rawurlencode($shareUrl); ?>&text=<?php echo rawurlencode($shareText); ?>">X</a>
+				<button id="btnCopy" class="btn btn-secondary">Copy link</button>
+			</div>
+			<script>
+			(function(){
+				var shareData = { title: <?php echo json_encode($event['title']); ?>, text: <?php echo json_encode($shareText); ?>, url: <?php echo json_encode($shareUrl); ?> };
+				var b = document.getElementById('btnShare');
+				if(b){ b.addEventListener('click', function(){ if(navigator.share){ navigator.share(shareData).catch(function(){}); } else { navigator.clipboard && navigator.clipboard.writeText(shareData.url); alert('Link copied'); } }); }
+				var c = document.getElementById('btnCopy'); if(c){ c.addEventListener('click', function(){ navigator.clipboard && navigator.clipboard.writeText(shareData.url); alert('Link copied'); }); }
+			})();
+			</script>
 			<div class="card p-4 mt-4">
 				<h2 class="font-semibold mb-2">About</h2>
 				<p class="text-gray-300 whitespace-pre-line"><?php echo nl2br(htmlspecialchars($event['description'] ?? '')); ?></p>

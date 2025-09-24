@@ -36,6 +36,9 @@ $router->get('/page', 'PagesController@show');
 $router->get('/partners', 'PartnersController@index');
 $router->post('/partners', 'PartnersController@store');
 $router->get('/tickets/view', 'TicketsController@view');
+$router->get('/organizers/show', 'OrganizersController@show');
+$router->post('/organizers/follow', 'OrganizersController@follow');
+$router->post('/organizers/unfollow', 'OrganizersController@unfollow');
 
 // User Auth (phone-based login)
 $router->get('/login', 'AuthController@loginUserForm');
@@ -105,6 +108,13 @@ $router->post('/admin/banners/delete', 'AdminController@bannerDelete');
 $router->get('/admin/banners/edit', 'AdminController@bannerEdit');
 $router->post('/admin/banners/update', 'AdminController@bannerUpdate');
 $router->post('/admin/banners/toggle', 'AdminController@bannerToggle');
+$router->get('/admin/partner-logos', 'AdminController@partnerLogos');
+$router->get('/admin/partner-logos/create', 'AdminController@partnerLogosCreate');
+$router->post('/admin/partner-logos', 'AdminController@partnerLogosStore');
+$router->post('/admin/partner-logos/delete', 'AdminController@partnerLogosDelete');
+$router->get('/admin/partner-logos/edit', 'AdminController@partnerLogosEdit');
+$router->post('/admin/partner-logos/update', 'AdminController@partnerLogosUpdate');
+$router->post('/admin/partner-logos/toggle', 'AdminController@partnerLogosToggle');
 $router->get('/admin/events/edit', 'AdminController@eventEdit');
 $router->get('/admin/events/show', 'AdminController@eventShow');
 $router->post('/admin/events/update', 'AdminController@eventUpdate');
@@ -126,6 +136,8 @@ $router->post('/admin/pages/delete', 'AdminController@pageDelete');
 $router->get('/admin/partners', 'AdminController@partners');
 $router->post('/admin/partners/status', 'AdminController@partnerStatus');
 $router->get('/admin/scans', 'AdminController@scans');
+$router->get('/admin/withdrawals', 'AdminController@withdrawalsIndex');
+$router->post('/admin/withdrawals/update', 'AdminController@withdrawalsUpdate');
 
 // Payments
 $router->get('/pay/mpesa', 'PaymentController@mpesa');

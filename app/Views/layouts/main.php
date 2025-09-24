@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Ticko</title>
+	<title><?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?></title>
 	<script>
 		// Tailwind CDN config: extend with brand colors
 		tailwind = window.tailwind || {}; tailwind.config = {
@@ -14,6 +14,38 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <?php $siteLogo = \App\Models\Setting::get('site.logo', 'logo.png'); $siteFavicon = \App\Models\Setting::get('site.favicon', $siteLogo); $siteTitle = \App\Models\Setting::get('site.name', 'Ticko'); ?>
     <link rel="icon" href="<?php echo base_url($siteFavicon); ?>">
+    <?php 
+        $metaTitle = \App\Models\Setting::get('seo.meta_title', $siteTitle);
+        $metaDesc = \App\Models\Setting::get('seo.meta_description', \App\Models\Setting::get('site.description',''));
+        $metaKeywords = \App\Models\Setting::get('seo.meta_keywords', 'events,tickets,concerts');
+        $metaRobots = \App\Models\Setting::get('seo.meta_robots', 'index,follow');
+        $ogImage = \App\Models\Setting::get('seo.og_image', $siteLogo);
+        $tw = \App\Models\Setting::get('seo.twitter', '');
+        // Event-specific overrides
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        if (strpos($path, '/events/show') !== false && isset($_GET['id'])) {
+            try {
+                $stmt = db()->prepare('SELECT title, description, poster_path FROM events WHERE id = ? LIMIT 1');
+                $stmt->execute([(int)$_GET['id']]);
+                if ($row = $stmt->fetch()) {
+                    $metaTitle = trim($row['title'] . ' | ' . $siteTitle);
+                    $metaDesc = $row['description'] !== null && $row['description'] !== '' ? substr(strip_tags($row['description']), 0, 160) : $metaDesc;
+                    if (!empty($row['poster_path'])) { $ogImage = $row['poster_path']; }
+                }
+            } catch (\Throwable $e) {}
+        }
+    ?>
+    <meta name="title" content="<?php echo htmlspecialchars($metaTitle); ?>">
+    <meta name="description" content="<?php echo htmlspecialchars($metaDesc); ?>">
+    <meta name="keywords" content="<?php echo htmlspecialchars($metaKeywords); ?>">
+    <meta name="robots" content="<?php echo htmlspecialchars($metaRobots); ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($metaTitle); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($metaDesc); ?>">
+    <meta property="og:image" content="<?php echo base_url($ogImage); ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?php echo base_url(ltrim($_SERVER['REQUEST_URI'] ?? '/', '/')); ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <?php if ($tw): ?><meta name="twitter:site" content="<?php echo htmlspecialchars($tw); ?>"><?php endif; ?>
 	<style>
 		:root{ --bg:#0b0b0b; --card:#111111; --text:#e5e7eb; --muted:#9ca3af; --accent:#ef4444; --accent-600:#dc2626; }
 		body{ background-color:var(--bg); color:var(--text); }
@@ -56,11 +88,14 @@
                 <a href="<?php echo base_url('/admin/events'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Events</a>
                 <a href="<?php echo base_url('/admin/banners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Banners</a>
                 <a href="<?php echo base_url('/admin/partners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Partners</a>
+                <a href="<?php echo base_url('/admin/partner-logos'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Partner Logos</a>
                 <a href="<?php echo base_url('/admin/pages'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Pages</a>
                 <a href="<?php echo base_url('/admin/settings'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Settings</a>
                 <a href="<?php echo base_url('/admin/email-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Email Templates</a>
                 <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">SMS Templates</a>
+                <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Withdrawals</a>
                 <a href="<?php echo base_url('/admin/profile'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Profile</a>
+                <a href="<?php echo base_url('/logout'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Logout</a>
             </nav>
         </div>
     </aside>
@@ -146,7 +181,7 @@
 			</div>
 		<?php endif; ?>
 		<?php include $viewFile; ?>
-</main>
+	</main>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('navToggle');
@@ -199,7 +234,9 @@ document.addEventListener('DOMContentLoaded', function(){
                 <div>
                     <div class="flex items-center gap-3 mb-3">
                         <img src="<?php echo base_url($siteLogo); ?>" alt="logo" class="h-10 w-auto">
+                        <?php if (empty($siteLogo)): ?>
                         <div class="text-xl font-semibold"><?php echo htmlspecialchars($siteTitle); ?></div>
+                        <?php endif; ?>
                     </div>
                     <p class="text-gray-400 text-sm leading-relaxed"><?php echo htmlspecialchars($siteDesc); ?></p>
                     <div class="flex items-center gap-3 mt-4">

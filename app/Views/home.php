@@ -15,6 +15,7 @@
             <?php endforeach; ?>
         </div>
     </div>
+
 </div>
 <script>
 (function(){
@@ -96,5 +97,19 @@
 		<?php endif; ?>
 	</div>
 </section>
+
+<?php $partners=[]; try { $partners = db()->query("SELECT * FROM partner_logos WHERE is_active=1 ORDER BY sort_order ASC, created_at DESC")->fetchAll(); } catch (\PDOException $e) {} ?>
+<?php if (!empty($partners)): ?>
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <h2 class="text-center text-sm uppercase tracking-wide text-gray-400 mb-4">Our Partners</h2>
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6 items-center opacity-90">
+        <?php foreach ($partners as $p): ?>
+            <a href="<?php echo htmlspecialchars($p['link_url'] ?? '#'); ?>" target="_blank" class="flex items-center justify-center">
+                <img src="<?php echo base_url($p['image_path']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" class="max-h-10 object-contain grayscale hover:grayscale-0 transition">
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 

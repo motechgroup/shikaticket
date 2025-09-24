@@ -24,6 +24,44 @@
             </div>
         </div>
 
+        <!-- SEO SECTION -->
+        <div class="border-t pt-6">
+            <h2 class="font-semibold mb-3">SEO</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-sm mb-1">Default Meta Title</label>
+                    <input class="input" name="seo_meta_title" value="<?php echo htmlspecialchars($settings['seo.meta_title'] ?? ($settings['site.name'] ?? '')); ?>">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm mb-1">Default Meta Description</label>
+                    <textarea class="textarea" name="seo_meta_description" rows="2"><?php echo htmlspecialchars($settings['seo.meta_description'] ?? ($settings['site.description'] ?? '')); ?></textarea>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm mb-1">Default Meta Keywords (comma-separated)</label>
+                    <input class="input" name="seo_meta_keywords" value="<?php echo htmlspecialchars($settings['seo.meta_keywords'] ?? 'events,tickets,concerts'); ?>">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Robots</label>
+                    <select class="select" name="seo_meta_robots">
+                        <?php $robots = $settings['seo.meta_robots'] ?? 'index,follow'; ?>
+                        <option value="index,follow" <?php echo $robots==='index,follow'?'selected':''; ?>>index,follow</option>
+                        <option value="noindex,follow" <?php echo $robots==='noindex,follow'?'selected':''; ?>>noindex,follow</option>
+                        <option value="index,nofollow" <?php echo $robots==='index,nofollow'?'selected':''; ?>>index,nofollow</option>
+                        <option value="noindex,nofollow" <?php echo $robots==='noindex,nofollow'?'selected':''; ?>>noindex,nofollow</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Twitter Handle</label>
+                    <input class="input" name="seo_twitter" placeholder="@brand" value="<?php echo htmlspecialchars($settings['seo.twitter'] ?? ''); ?>">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm mb-1">Default OpenGraph Image</label>
+                    <input type="file" name="seo_og_image" accept="image/*" class="input">
+                    <div class="text-xs text-gray-400 mt-1">Recommended 1200x630</div>
+                </div>
+            </div>
+        </div>
+
         <!-- SMTP EMAIL SECTION -->
         <div class="border-t pt-6">
             <h2 class="font-semibold mb-3">SMTP (Email)</h2>
