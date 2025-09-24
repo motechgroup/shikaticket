@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     <a class="link" href="<?php echo base_url('/page?slug=refund-policy'); ?>">Refund</a>
                     <a class="link" href="<?php echo base_url('/partners'); ?>">Partners</a>
                 </nav>
-                <span class="text-gray-500">Made with ❤️</span>
+                <span class="text-gray-500">Made with ❤️ · Developed by <a class="link" target="_blank" href="https://www.motechdigitalaagency.co.ke">Motech Digital Agency</a></span>
             </div>
         </div>
     </footer>
