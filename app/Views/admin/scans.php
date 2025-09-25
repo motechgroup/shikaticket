@@ -10,6 +10,8 @@
 					<tr>
 						<th class="p-3 text-left">Ticket Code</th>
 						<th class="p-3 text-left">Event</th>
+						<th class="p-3 text-left">Ticket Type</th>
+						<th class="p-3 text-left">Scanner Device</th>
 						<th class="p-3 text-left">Organizer</th>
 						<th class="p-3 text-left">Redeemed At</th>
 					</tr>
@@ -19,6 +21,17 @@
 					<tr>
 						<td class="p-3"><?php echo htmlspecialchars($s['code']); ?></td>
 						<td class="p-3"><?php echo htmlspecialchars($s['event_title']); ?></td>
+						<td class="p-3">
+							<span class="badge"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $s['tier'] ?? 'regular'))); ?></span>
+						</td>
+						<td class="p-3">
+							<?php if (!empty($s['device_name'])): ?>
+								<div class="font-medium"><?php echo htmlspecialchars($s['device_name']); ?></div>
+								<div class="text-xs text-gray-400 font-mono uppercase"><?php echo htmlspecialchars(strtoupper($s['device_code'])); ?></div>
+							<?php else: ?>
+								<span class="text-gray-400">Manual</span>
+							<?php endif; ?>
+						</td>
 						<td class="p-3"><?php echo htmlspecialchars($s['organizer'] ?? ''); ?></td>
 						<td class="p-3"><?php echo htmlspecialchars($s['redeemed_at']); ?></td>
 					</tr>

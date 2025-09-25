@@ -217,7 +217,7 @@ class PaymentController
             $itemId = (int)($item['id'] ?? 0);
             if (!$itemId) { continue; }
             $qty = max(1, (int)($item['quantity'] ?? 1));
-            $ins = db()->prepare('INSERT INTO tickets (order_item_id, code, qr_path, status) VALUES (?, ?, ?, "valid")');
+            $ins = db()->prepare('INSERT INTO tickets (order_item_id, code, qr_path, status, tier) VALUES (?, ?, ?, "valid", ?)');
             $codes = [];
             for ($i=0; $i<$qty; $i++) {
                 $code = substr(str_shuffle('0123456789'), 0, 6);
@@ -227,7 +227,7 @@ class PaymentController
                 $qrRel = 'uploads/qrs/' . $code . '.png';
                 $qrAbs = __DIR__ . '/../../public/' . $qrRel;
                 @file_put_contents($qrAbs, @file_get_contents($qrUrl));
-                $ins->execute([$itemId, $code, $qrRel]);
+                $ins->execute([$itemId, $code, $qrRel, $item['tier'] ?? 'regular']);
                 $codes[] = ['code'=>$code, 'qr'=>$qrRel];
             }
             $ticketsSummaryHtml .= '<div style="margin:16px 0;padding:12px;border:1px solid #1f2937;border-radius:8px">';
@@ -258,6 +258,27 @@ class PaymentController
             'order_id' => $orderId,
         ]);
         if ($html2 !== '') { $mailer->send($user['email'] ?? '', 'Order Receipt', $html2); }
+
+        // Also send SMS with ticket codes and quick link (works for real phone numbers)
+        try {
+            $sms = new \App\Services\Sms();
+            if ($sms->isConfigured() && !empty($user['phone'])) {
+                $codesFlat = [];
+                foreach ($items as $it2) {
+                    $itTickets = db()->prepare('SELECT code FROM tickets t JOIN order_items oi ON oi.id=t.order_item_id WHERE oi.id = ? ORDER BY t.id ASC');
+                    $itTickets->execute([(int)$it2['id']]);
+                    $codesFlat = array_merge($codesFlat, array_map(function($r){ return $r['code']; }, $itTickets->fetchAll()));
+                }
+                $codesText = implode(', ', array_slice($codesFlat, 0, 5));
+                $ticketLink = base_url('/tickets/view?code=' . urlencode($codesFlat[0] ?? ''));
+                $body = \App\Services\SmsTemplates::render('payment_success', [
+                    'order_id' => $orderId,
+                    'tickets' => $codesText . ' | Link: ' . $ticketLink,
+                ]);
+                if ($body === '') { $body = 'Order #' . $orderId . ' confirmed. Tickets: ' . $codesText . ' ' . $ticketLink; }
+                $sms->send($user['phone'], $body);
+            }
+        } catch (\Throwable $e) { /* ignore sms errors */ }
     }
 
 	public function paypal(): void
@@ -267,7 +288,120 @@ class PaymentController
             echo 'PayPal is disabled';
             return;
         }
-        echo 'PayPal initiation stub';
+
+		$env = Setting::get('payments.paypal.env', 'sandbox');
+		$clientId = Setting::get('payments.paypal.client_id', '');
+		$secret = Setting::get('payments.paypal.secret', '');
+		$base = $env === 'production' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+		$returnUrl = base_url('/pay/paypal');
+		$cancelUrl = base_url('/user/orders');
+
+		if ($clientId === '' || $secret === '') { http_response_code(500); echo 'PayPal not configured'; return; }
+
+		// If PayPal redirected back with token (order id), capture it
+		$ppOrderId = $_GET['token'] ?? '';
+		if ($ppOrderId !== '') {
+			// Capture
+			$chTok = curl_init($base . '/v1/oauth2/token');
+			curl_setopt_array($chTok, [
+				CURLOPT_POST => true,
+				CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_USERPWD => $clientId . ':' . $secret,
+			]);
+			$respTok = curl_exec($chTok);
+			$access = json_decode($respTok, true)['access_token'] ?? null;
+			if (!$access) { http_response_code(502); echo 'PayPal token error'; return; }
+			$chCap = curl_init($base . '/v2/checkout/orders/' . urlencode($ppOrderId) . '/capture');
+			curl_setopt_array($chCap, [
+				CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $access],
+				CURLOPT_POST => true,
+				CURLOPT_RETURNTRANSFER => true,
+			]);
+			$respCap = curl_exec($chCap);
+			$data = json_decode($respCap, true) ?: [];
+			$status = $data['status'] ?? '';
+			// Try to map back to our order via reference
+			$ref = '';
+			try { $ref = ($data['purchase_units'][0]['reference_id'] ?? ''); } catch (\Throwable $e) {}
+			$orderId = (int)preg_replace('/\D+/', '', $ref);
+			if ($status === 'COMPLETED' && $orderId > 0) {
+				// Record payment
+				db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, (SELECT total_amount FROM orders WHERE id=?), (SELECT currency FROM orders WHERE id=?), ?, ?)')
+					->execute([$orderId, 'paypal', $ppOrderId, $orderId, $orderId, 'successful', json_encode($data)]);
+				db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['paid', $orderId]);
+				$this->generateTicketsAndSendEmails($orderId);
+				flash_set('success', 'PayPal payment completed.');
+				redirect(base_url('/user/orders?order_id=' . $orderId));
+			}
+			flash_set('error', 'PayPal capture failed.');
+			redirect(base_url('/user/orders'));
+		}
+
+		// Otherwise: create PayPal order and redirect to approval
+		$orderId = (int)($_GET['order_id'] ?? $_POST['order_id'] ?? 0);
+		if ($orderId <= 0) { http_response_code(400); echo 'Missing order_id'; return; }
+		$stmt = db()->prepare('SELECT * FROM orders WHERE id = ?');
+		$stmt->execute([$orderId]);
+		$order = $stmt->fetch();
+		if (!$order) { http_response_code(404); echo 'Order not found'; return; }
+
+        $amount = number_format((float)$order['total_amount'], 2, '.', '');
+        $currency = strtoupper($order['currency'] ?? 'KES');
+        // PayPal supports specific currencies. If unsupported, fallback to USD to avoid initiation failures
+        $supported = [
+            'AUD','BRL','CAD','CNY','CZK','DKK','EUR','HKD','HUF','INR','ILS','JPY','MYR','MXN','TWD','NZD','NOK','PHP','PLN','GBP','RUB','SGD','SEK','CHF','THB','USD'
+        ];
+        if (!in_array($currency, $supported, true)) { $currency = 'USD'; }
+
+		// Get access token
+		$ch = curl_init($base . '/v1/oauth2/token');
+		curl_setopt_array($ch, [
+			CURLOPT_POST => true,
+			CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_USERPWD => $clientId . ':' . $secret,
+		]);
+		$tok = curl_exec($ch);
+		$accessToken = json_decode($tok, true)['access_token'] ?? null;
+		if (!$accessToken) { http_response_code(502); echo 'PayPal token error'; return; }
+
+		$payload = [
+			'intent' => 'CAPTURE',
+			'purchase_units' => [[
+				'reference_id' => 'ORDER' . $orderId,
+				'amount' => [ 'currency_code' => $currency, 'value' => $amount ]
+			]],
+			'application_context' => [
+				'return_url' => $returnUrl,
+				'cancel_url' => $cancelUrl
+			]
+		];
+		$ch2 = curl_init($base . '/v2/checkout/orders');
+		curl_setopt_array($ch2, [
+			CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $accessToken],
+			CURLOPT_POST => true,
+			CURLOPT_POSTFIELDS => json_encode($payload),
+			CURLOPT_RETURNTRANSFER => true,
+		]);
+        $resp = curl_exec($ch2);
+        $data = json_decode($resp, true) ?: [];
+		$approve = '';
+		foreach (($data['links'] ?? []) as $lnk) { if (($lnk['rel'] ?? '') === 'approve') { $approve = $lnk['href'] ?? ''; break; } }
+		if ($approve !== '') {
+			// Record initiated payment
+			db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
+				->execute([$orderId, 'paypal', $data['id'] ?? null, $order['total_amount'], $currency, 'initiated', json_encode($data)]);
+			header('Location: ' . $approve);
+			exit;
+		}
+        // Persist payload for diagnostics when initiation fails
+        try {
+            db()->prepare("INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, 'paypal', NULL, ?, ?, 'failed', ?)")
+                ->execute([$orderId, $order['total_amount'], $currency, json_encode(['request'=>$payload,'response'=>$data])]);
+        } catch (\Throwable $e) {}
+        http_response_code(502);
+        echo 'PayPal initiation failed';
 	}
 
 	public function flutterwave(): void
@@ -277,7 +411,102 @@ class PaymentController
             echo 'Flutterwave is disabled';
             return;
         }
-        echo 'Flutterwave initiation stub';
+
+        $env = Setting::get('payments.flutterwave.env', 'sandbox');
+        $publicKey = Setting::get('payments.flutterwave.public_key', '');
+        $secretKey = Setting::get('payments.flutterwave.secret_key', '');
+        if ($publicKey === '' || $secretKey === '') { http_response_code(500); echo 'Flutterwave not configured'; return; }
+
+        // If redirected back from Flutterwave, verify the transaction
+        $status = $_GET['status'] ?? '';
+        $txId = $_GET['transaction_id'] ?? '';
+        if ($status !== '' && $txId !== '') {
+            $base = 'https://api.flutterwave.com'; // same for sandbox/live
+            $verifyUrl = $base . '/v3/transactions/' . urlencode($txId) . '/verify';
+            $ch = curl_init($verifyUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $secretKey],
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            $resp = curl_exec($ch);
+            $json = json_decode($resp, true) ?: [];
+            $ok = (($json['status'] ?? '') === 'success') && (($json['data']['status'] ?? '') === 'successful');
+            // Extract order id from tx_ref generated as 'ORDER{orderId}-{timestamp}'
+            $txRef = $json['data']['tx_ref'] ?? '';
+            $orderId = 0;
+            if (preg_match('/ORDER(\d+)/', $txRef, $m)) { $orderId = (int)($m[1] ?? 0); }
+            if ($ok && $orderId > 0) {
+                // Confirm order exists to avoid null amount insertion
+                $ordStmt = db()->prepare('SELECT total_amount, currency FROM orders WHERE id = ?');
+                $ordStmt->execute([$orderId]);
+                $ord = $ordStmt->fetch();
+                if (!$ord) { flash_set('error', 'Order not found for Flutterwave tx_ref.'); redirect(base_url('/user/orders')); }
+                // Record payment if not already recorded
+                db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                    ->execute([$orderId, 'flutterwave', (string)$txId, $ord['total_amount'], $ord['currency'], 'successful', json_encode($json)]);
+                db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['paid', $orderId]);
+                $this->generateTicketsAndSendEmails($orderId);
+                flash_set('success', 'Flutterwave payment completed.');
+                redirect(base_url('/user/orders?order_id=' . $orderId));
+            }
+            flash_set('error', 'Flutterwave verification failed.');
+            redirect(base_url('/user/orders'));
+        }
+
+        // Otherwise: create payment and redirect to hosted checkout
+        $orderId = (int)($_GET['order_id'] ?? $_POST['order_id'] ?? 0);
+        if ($orderId <= 0) { http_response_code(400); echo 'Missing order_id'; return; }
+        $stmt = db()->prepare('SELECT * FROM orders WHERE id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) { http_response_code(404); echo 'Order not found'; return; }
+
+        $amount = number_format((float)$order['total_amount'], 2, '.', '');
+        $currency = strtoupper($order['currency'] ?? 'KES');
+        $user = User::findById((int)($_SESSION['user_id'] ?? 0));
+        $txRef = 'ORDER' . $orderId . '-' . time();
+        $redirectUrl = base_url('/pay/flutterwave');
+
+        $payload = [
+            'tx_ref' => $txRef,
+            'amount' => $amount,
+            'currency' => $currency,
+            'redirect_url' => $redirectUrl,
+            'customer' => [
+                'email' => $user['email'] ?? 'guest@example.com',
+                'phonenumber' => preg_replace('/\D+/', '', $user['phone'] ?? ''),
+                'name' => trim(($user['name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
+            ],
+            'customizations' => [
+                'title' => 'Ticket Order #' . $orderId,
+                'description' => 'Event tickets',
+            ],
+        ];
+
+        $ch = curl_init('https://api.flutterwave.com/v3/payments');
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $secretKey],
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+        ]);
+        $resp = curl_exec($ch);
+        $json = json_decode($resp, true) ?: [];
+        $link = $json['data']['link'] ?? '';
+        if ($link !== '') {
+            // Record initiated payment
+            db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$orderId, 'flutterwave', $txRef, $order['total_amount'], $currency, 'initiated', json_encode($json)]);
+            header('Location: ' . $link);
+            exit;
+        }
+        // Persist payload on failure for diagnostics
+        try {
+            db()->prepare("INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, 'flutterwave', NULL, ?, ?, 'failed', ?)")
+                ->execute([$orderId, $order['total_amount'], $currency, json_encode(['request'=>$payload,'response'=>$json])]);
+        } catch (\Throwable $e) {}
+        http_response_code(502);
+        echo 'Flutterwave initiation failed';
 	}
 
 	public function mpesaCallback(): void
@@ -321,7 +550,7 @@ class PaymentController
                     $itemId = (int)($item['id'] ?? 0);
                     if (!$itemId) { continue; }
                     $qty = max(1, (int)($item['quantity'] ?? 1));
-                    $ins = db()->prepare('INSERT INTO tickets (order_item_id, code, qr_path, status) VALUES (?, ?, ?, "valid")');
+                    $ins = db()->prepare('INSERT INTO tickets (order_item_id, code, qr_path, status, tier) VALUES (?, ?, ?, "valid", ?)');
                     $codes = [];
                     for ($i=0; $i<$qty; $i++) {
                         $code = substr(str_shuffle('0123456789'), 0, 6);
@@ -332,7 +561,7 @@ class PaymentController
                         $qrRel = 'uploads/qrs/' . $code . '.png';
                         $qrAbs = __DIR__ . '/../../public/' . $qrRel;
                         @file_put_contents($qrAbs, @file_get_contents($qrUrl));
-                        $ins->execute([$itemId, $code, $qrRel]);
+                        $ins->execute([$itemId, $code, $qrRel, $item['tier'] ?? 'regular']);
                         $codes[] = ['code'=>$code, 'qr'=>$qrRel];
                     }
                     // Build per-item email block
@@ -391,8 +620,15 @@ class PaymentController
                 if ($html2 !== '') { $mailer->send($user['email'] ?? '', 'Order Receipt', $html2); }
             }
 		} else {
-			db()->prepare('UPDATE payments SET status = ? WHERE id = ?')->execute(['failed', $payment['id']]);
-			db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['failed', $orderId]);
+            // Do NOT mark as failed immediately. Many real transactions complete a few seconds later
+            // and are only confirmable via STK Query or a delayed callback. Keep it pending and let
+            // the reconcile job or subsequent callback flip to paid.
+            try {
+                db()->prepare('UPDATE payments SET status = ? WHERE id = ?')->execute(['initiated', $payment['id']]);
+            } catch (\Throwable $e) {}
+            try {
+                db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['pending', $orderId]);
+            } catch (\Throwable $e) {}
 		}
 		echo 'OK';
 	}

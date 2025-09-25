@@ -3,15 +3,30 @@
     <h1 class="text-2xl font-semibold mb-6">Site Settings</h1>
     <form method="post" enctype="multipart/form-data" action="<?php echo base_url('/admin/settings'); ?>" class="space-y-6 card p-6">
 		<?php echo csrf_field(); ?>
-        <div>
+
+        <!-- Tabs -->
+        <style>
+            .tab-btn{ padding:.5rem .75rem; border-radius:.5rem; }
+            .tab-btn.active{ background:#1f2937; color:#e5e7eb; }
+        </style>
+        <div class="border-b border-gray-800 pb-3 mb-3">
+            <nav id="settingsTabs" class="flex flex-wrap gap-2 text-sm">
+                <button type="button" class="tab-btn active" data-tab="general">General</button>
+                <button type="button" class="tab-btn" data-tab="seo">SEO</button>
+                <button type="button" class="tab-btn" data-tab="email">Email (SMTP)</button>
+                <button type="button" class="tab-btn" data-tab="sms">SMS</button>
+                <button type="button" class="tab-btn" data-tab="payments">Payments</button>
+            </nav>
+        </div>
+        <div data-tab-panel="general">
             <label class="block text-sm mb-1">Site Name</label>
             <input name="site_name" value="<?php echo htmlspecialchars($settings['site.name'] ?? 'Ticko'); ?>" class="input">
         </div>
-        <div>
+        <div data-tab-panel="general">
             <label class="block text-sm mb-1">Site Description</label>
             <textarea name="site_description" class="textarea" rows="2"><?php echo htmlspecialchars($settings['site.description'] ?? ''); ?></textarea>
         </div>
-        <div class="grid sm:grid-cols-2 gap-4">
+        <div class="grid sm:grid-cols-2 gap-4" data-tab-panel="general">
             <div>
                 <label class="block text-sm mb-1">Logo</label>
                 <input type="file" name="site_logo" accept="image/*" class="input">
@@ -25,7 +40,7 @@
         </div>
 
         <!-- SEO SECTION -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="seo" style="display:none">
             <h2 class="font-semibold mb-3">SEO</h2>
             <div class="grid sm:grid-cols-2 gap-4">
                 <div class="sm:col-span-2">
@@ -63,7 +78,7 @@
         </div>
 
         <!-- SMTP EMAIL SECTION -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="email" style="display:none">
             <h2 class="font-semibold mb-3">SMTP (Email)</h2>
             <div class="grid sm:grid-cols-2 gap-4">
                 <input class="input" name="smtp_host" placeholder="SMTP Host" value="<?php echo htmlspecialchars($settings['smtp.host'] ?? ''); ?>">
@@ -78,13 +93,14 @@
                 <input class="input" name="smtp_from_email" placeholder="From Email" value="<?php echo htmlspecialchars($settings['smtp.from_email'] ?? ''); ?>">
                 <input class="input" name="smtp_from_name" placeholder="From Name" value="<?php echo htmlspecialchars($settings['smtp.from_name'] ?? 'Ticko'); ?>">
             </div>
-            <div class="mt-6">
+            <div class="mt-6 flex items-center gap-3">
                 <a class="btn btn-secondary" href="<?php echo base_url('/admin/email-templates'); ?>">Manage Email Templates</a>
+                <a class="btn btn-primary" href="#test-email-box" onclick="document.getElementById('test-email-box').classList.toggle('hidden');return false;">Send Test Email</a>
             </div>
         </div>
 
         <!-- Twilio SMS SECTION -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="sms" style="display:none">
             <h2 class="font-semibold mb-3">Twilio (SMS)</h2>
             <div class="grid sm:grid-cols-2 gap-4">
                 <input class="input" name="twilio_sid" placeholder="Account SID" value="<?php echo htmlspecialchars($settings['twilio.sid'] ?? ''); ?>">
@@ -94,7 +110,7 @@
         </div>
 
         <!-- SMS Provider Selection -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="sms" style="display:none">
             <h2 class="font-semibold mb-3">SMS Provider</h2>
             <select class="select" name="sms_provider">
                 <?php $currentProvider = $settings['sms.provider'] ?? 'twilio'; ?>
@@ -104,7 +120,7 @@
         </div>
 
         <!-- TextSMS SECTION -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="sms" style="display:none">
             <h2 class="font-semibold mb-3">TextSMS (Kenya)</h2>
             <div class="grid sm:grid-cols-2 gap-4">
                 <input class="input" name="textsms_api_key" placeholder="API Key" value="<?php echo htmlspecialchars($settings['textsms.api_key'] ?? ''); ?>">
@@ -116,17 +132,18 @@
         </div>
 
         <!-- PAYMENTS SECTION -->
-        <div class="border-t pt-6">
+        <div class="border-t pt-6" data-tab-panel="payments" style="display:none">
 			<h2 class="font-semibold mb-3">Payments</h2>
             <div class="space-y-4">
                 <!-- MPESA -->
                 <div class="p-4 rounded border border-gray-700 bg-[#0f0f10]">
-					<div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between">
 						<h3 class="font-semibold">M-Pesa (STK Push)</h3>
 						<label class="inline-flex items-center gap-2 text-sm">
 							<input type="checkbox" name="payments_mpesa_enabled" <?php echo (($settings['payments.mpesa.enabled'] ?? '0') === '1') ? 'checked' : ''; ?>> Enable
 						</label>
 					</div>
+                    <div class="text-xs text-gray-400 mt-1">Tip: You can restore from environment variables if set (MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_URL).</div>
 					<div class="grid sm:grid-cols-2 gap-4 mt-3">
 						<input class="input" name="mpesa_consumer_key" placeholder="Consumer Key" value="<?php echo htmlspecialchars($settings['payments.mpesa.consumer_key'] ?? ''); ?>">
 						<input class="input" name="mpesa_consumer_secret" placeholder="Consumer Secret" value="<?php echo htmlspecialchars($settings['payments.mpesa.consumer_secret'] ?? ''); ?>">
@@ -138,6 +155,9 @@
 						</select>
 						<input class="input" name="mpesa_callback_url" placeholder="Callback URL (https)" value="<?php echo htmlspecialchars($settings['payments.mpesa.callback_url'] ?? ''); ?>">
 					</div>
+                    <div class="mt-3">
+                        <button class="btn btn-secondary" type="submit" formaction="<?php echo base_url('/admin/settings/restore-mpesa'); ?>" formmethod="post">Restore from Environment</button>
+                    </div>
 				</div>
 
                 <!-- PAYPAL -->
@@ -175,8 +195,39 @@
             </div>
         </div>
 
-        <button class="btn btn-primary">Save</button>
+        <div class="h-20"></div>
+        <div class="fixed bottom-0 inset-x-0 z-40 border-t border-gray-800 bg-[#0f0f10]/95 backdrop-blur">
+            <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-end gap-3">
+                <a href="<?php echo base_url('/admin'); ?>" class="btn btn-secondary">Cancel</a>
+                <button class="btn btn-primary" type="submit">Save Changes</button>
+            </div>
+        </div>
     </form>
+
+    <!-- Separate, non-nested Test Email form -->
+    <div id="test-email-box" class="card p-4 mt-4 hidden">
+        <form method="post" action="<?php echo base_url('/admin/settings/test-email'); ?>" class="flex items-center gap-2" onsubmit="this.querySelector('button').textContent='Sending...';this.querySelector('button').disabled=true;">
+            <?php echo csrf_field(); ?>
+            <input class="input" type="email" name="test_email" placeholder="Send test to (email)" required>
+            <button class="btn btn-primary" type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+    (function(){
+      const tabs = document.getElementById('settingsTabs');
+      if(!tabs) return;
+      const btns = Array.from(tabs.querySelectorAll('.tab-btn'));
+      const panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+      function show(name){
+        panels.forEach(p=>{ p.style.display = (p.getAttribute('data-tab-panel')===name)?'block':'none'; });
+        btns.forEach(b=>{ b.classList.toggle('active', b.getAttribute('data-tab')===name); });
+      }
+      btns.forEach(b=>b.addEventListener('click', ()=>show(b.getAttribute('data-tab'))));
+      // default
+      show('general');
+    })();
+    </script>
 
 </div>
 

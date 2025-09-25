@@ -31,6 +31,7 @@ $router = new Router();
 // Home
 $router->get('/', 'HomeController@index');
 // Public pages
+$router->get('/events', 'EventController@publicIndex');
 $router->get('/events/show', 'EventController@show');
 $router->get('/page', 'PagesController@show');
 $router->get('/partners', 'PartnersController@index');
@@ -41,6 +42,7 @@ $router->post('/organizers/follow', 'OrganizersController@follow');
 $router->post('/organizers/unfollow', 'OrganizersController@unfollow');
 $router->get('/help', 'DocsController@index');
 $router->get('/help/show', 'DocsController@show');
+$router->get('/sitemap.xml', 'SitemapController@index');
 
 // User Auth (phone-based login)
 $router->get('/login', 'AuthController@loginUserForm');
@@ -85,6 +87,13 @@ $router->get('/organizer/profile', 'OrganizerController@profile');
 $router->post('/organizer/profile', 'OrganizerController@profileSave');
 $router->post('/organizer/profile/verify-phone', 'OrganizerController@startPhoneVerify');
 $router->post('/organizer/profile/verify-phone/confirm', 'OrganizerController@confirmPhoneVerify');
+$router->get('/organizer/scanner-devices', 'OrganizerController@scannerDevices');
+$router->post('/organizer/scanner-devices', 'OrganizerController@createScannerDevice');
+$router->post('/organizer/scanner-devices/update', 'OrganizerController@updateScannerDevice');
+$router->post('/organizer/scanner-devices/delete', 'OrganizerController@deleteScannerDevice');
+$router->get('/organizer/event-scanner-assignments', 'OrganizerController@eventScannerAssignments');
+$router->post('/organizer/event-scanner-assignments/assign', 'OrganizerController@assignScannerToEvent');
+$router->post('/organizer/event-scanner-assignments/unassign', 'OrganizerController@unassignScannerFromEvent');
 
 // Admin
 $router->get('/admin', 'AdminController@index');
@@ -125,6 +134,8 @@ $router->post('/admin/events/feature', 'AdminController@eventFeature');
 $router->post('/admin/events/delete', 'AdminController@eventDelete');
 $router->get('/admin/settings', 'AdminController@settings');
 $router->post('/admin/settings', 'AdminController@saveSettings');
+$router->post('/admin/settings/test-email', 'AdminController@sendTestEmail');
+$router->post('/admin/settings/restore-mpesa', 'AdminController@restoreMpesaFromEnv');
 $router->get('/admin/profile', 'AdminController@profile');
 $router->post('/admin/profile', 'AdminController@profileSave');
 $router->get('/admin/email-templates', 'AdminController@emailTemplates');
@@ -138,6 +149,7 @@ $router->post('/admin/pages/delete', 'AdminController@pageDelete');
 $router->get('/admin/partners', 'AdminController@partners');
 $router->post('/admin/partners/status', 'AdminController@partnerStatus');
 $router->get('/admin/scans', 'AdminController@scans');
+// Admin scanner assignments removed - organizers manage their own devices
 $router->get('/admin/withdrawals', 'AdminController@withdrawalsIndex');
 $router->post('/admin/withdrawals/update', 'AdminController@withdrawalsUpdate');
 

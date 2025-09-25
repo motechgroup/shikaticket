@@ -1,5 +1,6 @@
 <?php
 namespace App\Controllers;
+use App\Models\ScannerDevice;
 
 class OrganizerController
 {
@@ -215,6 +216,194 @@ class OrganizerController
 			flash_set('error', 'Invalid OTP.');
 		}
 		redirect(base_url('/organizer/profile'));
+	}
+
+	// Scanner Device Management
+	public function scannerDevices(): void
+	{
+		require_organizer();
+		$organizerId = (int)$_SESSION['organizer_id'];
+		$devices = ScannerDevice::findByOrganizer($organizerId);
+		
+		// Get scan reports for organizer's devices
+		$scanReports = [];
+		if (!empty($devices)) {
+			$deviceIds = array_column($devices, 'id');
+			$placeholders = str_repeat('?,', count($deviceIds) - 1) . '?';
+			
+			$stmt = db()->prepare("
+				SELECT t.*, t.code as ticket_code, t.redeemed_at, t.tier,
+					   sd.device_name, sd.device_code,
+					   e.title as event_title, e.event_date, e.venue,
+					   oi.quantity, oi.unit_price
+				FROM tickets t
+				LEFT JOIN scanner_devices sd ON sd.id = t.scanner_device_id
+				JOIN order_items oi ON oi.id = t.order_item_id
+				JOIN events e ON e.id = oi.event_id
+				WHERE t.scanner_device_id IN ($placeholders)
+				AND t.status = 'redeemed'
+				ORDER BY t.redeemed_at DESC
+				LIMIT 100
+			");
+			$stmt->execute($deviceIds);
+			$scanReports = $stmt->fetchAll();
+		}
+		
+		view('organizer/scanner_devices', compact('devices', 'scanReports'));
+	}
+
+	public function createScannerDevice(): void
+	{
+		require_organizer();
+		$deviceName = trim($_POST['device_name'] ?? '');
+		if ($deviceName === '') {
+			flash_set('error', 'Device name is required.');
+			redirect(base_url('/organizer/scanner-devices'));
+		}
+		
+		$organizerId = (int)$_SESSION['organizer_id'];
+		$deviceId = ScannerDevice::create($organizerId, $deviceName);
+		flash_set('success', 'Scanner device created successfully.');
+		redirect(base_url('/organizer/scanner-devices'));
+	}
+
+	public function updateScannerDevice(): void
+	{
+		require_organizer();
+		$deviceId = (int)($_POST['device_id'] ?? 0);
+		$deviceName = trim($_POST['device_name'] ?? '');
+		$isActive = isset($_POST['is_active']);
+		
+		if ($deviceId <= 0 || $deviceName === '') {
+			flash_set('error', 'Invalid device data.');
+			redirect(base_url('/organizer/scanner-devices'));
+		}
+		
+		// Verify device belongs to organizer
+		$stmt = db()->prepare('SELECT id FROM scanner_devices WHERE id = ? AND organizer_id = ?');
+		$stmt->execute([$deviceId, $_SESSION['organizer_id']]);
+		if (!$stmt->fetch()) {
+			flash_set('error', 'Device not found.');
+			redirect(base_url('/organizer/scanner-devices'));
+		}
+		
+		ScannerDevice::update($deviceId, $deviceName, $isActive);
+		flash_set('success', 'Scanner device updated successfully.');
+		redirect(base_url('/organizer/scanner-devices'));
+	}
+
+	public function deleteScannerDevice(): void
+	{
+		require_organizer();
+		$deviceId = (int)($_POST['device_id'] ?? 0);
+		
+		if ($deviceId <= 0) {
+			flash_set('error', 'Invalid device ID.');
+			redirect(base_url('/organizer/scanner-devices'));
+		}
+		
+		// Verify device belongs to organizer
+		$stmt = db()->prepare('SELECT id FROM scanner_devices WHERE id = ? AND organizer_id = ?');
+		$stmt->execute([$deviceId, $_SESSION['organizer_id']]);
+		if (!$stmt->fetch()) {
+			flash_set('error', 'Device not found.');
+			redirect(base_url('/organizer/scanner-devices'));
+		}
+		
+		ScannerDevice::delete($deviceId);
+		flash_set('success', 'Scanner device deleted successfully.');
+		redirect(base_url('/organizer/scanner-devices'));
+	}
+
+	public function eventScannerAssignments(): void
+	{
+		require_organizer();
+		
+		// Get organizer's events
+		$events = db()->prepare('SELECT * FROM events WHERE organizer_id = ? AND is_published = 1 ORDER BY event_date DESC');
+		$events->execute([$_SESSION['organizer_id']]);
+		$events = $events->fetchAll();
+		
+		// Get organizer's own scanner devices
+		$assignedDevices = db()->prepare('
+			SELECT sd.*
+			FROM scanner_devices sd
+			WHERE sd.organizer_id = ? AND sd.is_active = 1
+			ORDER BY sd.created_at DESC
+		');
+		$assignedDevices->execute([$_SESSION['organizer_id']]);
+		$assignedDevices = $assignedDevices->fetchAll();
+		
+		view('organizer/event_scanner_assignments', compact('events', 'assignedDevices'));
+	}
+
+	public function assignScannerToEvent(): void
+	{
+		require_organizer();
+		$eventId = (int)($_POST['event_id'] ?? 0);
+		$scannerDeviceId = (int)($_POST['scanner_device_id'] ?? 0);
+		
+		if ($eventId <= 0 || $scannerDeviceId <= 0) {
+			flash_set('error', 'Invalid event or scanner device.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Verify event ownership
+		$stmt = db()->prepare('SELECT 1 FROM events WHERE id = ? AND organizer_id = ? LIMIT 1');
+		$stmt->execute([$eventId, $_SESSION['organizer_id']]);
+		if (!$stmt->fetch()) {
+			flash_set('error', 'Event not found.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Verify scanner device belongs to this organizer
+		$stmt = db()->prepare('SELECT 1 FROM scanner_devices WHERE id = ? AND organizer_id = ? AND is_active = 1 LIMIT 1');
+		$stmt->execute([$scannerDeviceId, $_SESSION['organizer_id']]);
+		if (!$stmt->fetch()) {
+			flash_set('error', 'Scanner device not found or not yours.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Check if already assigned to this event
+		$stmt = db()->prepare('SELECT 1 FROM event_scanner_assignments WHERE event_id = ? AND scanner_device_id = ? AND is_active = 1 LIMIT 1');
+		$stmt->execute([$eventId, $scannerDeviceId]);
+		if ($stmt->fetch()) {
+			flash_set('error', 'Scanner device is already assigned to this event.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Assign scanner to event
+		$stmt = db()->prepare('INSERT INTO event_scanner_assignments (event_id, scanner_device_id, organizer_id) VALUES (?, ?, ?)');
+		$stmt->execute([$eventId, $scannerDeviceId, $_SESSION['organizer_id']]);
+		
+		flash_set('success', 'Scanner device assigned to event successfully.');
+		redirect(base_url('/organizer/event-scanner-assignments'));
+	}
+
+	public function unassignScannerFromEvent(): void
+	{
+		require_organizer();
+		$assignmentId = (int)($_POST['assignment_id'] ?? 0);
+		
+		if ($assignmentId <= 0) {
+			flash_set('error', 'Invalid assignment ID.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Verify assignment ownership
+		$stmt = db()->prepare('SELECT 1 FROM event_scanner_assignments WHERE id = ? AND organizer_id = ? LIMIT 1');
+		$stmt->execute([$assignmentId, $_SESSION['organizer_id']]);
+		if (!$stmt->fetch()) {
+			flash_set('error', 'Assignment not found.');
+			redirect(base_url('/organizer/event-scanner-assignments'));
+		}
+		
+		// Deactivate assignment
+		$stmt = db()->prepare('UPDATE event_scanner_assignments SET is_active = 0 WHERE id = ?');
+		$stmt->execute([$assignmentId]);
+		
+		flash_set('success', 'Scanner device unassigned from event successfully.');
+		redirect(base_url('/organizer/event-scanner-assignments'));
 	}
 }
 

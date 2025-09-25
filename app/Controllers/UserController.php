@@ -12,8 +12,13 @@ class UserController
 	public function orders(): void
 	{
 		require_user();
-		$stmt = db()->prepare('SELECT o.*, p.status AS payment_status FROM orders o LEFT JOIN payments p ON p.order_id = o.id AND p.id = (SELECT MAX(id) FROM payments WHERE order_id = o.id) WHERE o.user_id = ? ORDER BY o.created_at DESC');
-		$stmt->execute([$_SESSION['user_id']]);
+        // Show only successful orders for a clean UX
+        $stmt = db()->prepare("SELECT o.*, p.status AS payment_status
+            FROM orders o
+            LEFT JOIN payments p ON p.order_id = o.id AND p.id = (SELECT MAX(id) FROM payments WHERE order_id = o.id)
+            WHERE o.user_id = ? AND o.status = 'paid'
+            ORDER BY o.created_at DESC");
+        $stmt->execute([$_SESSION['user_id']]);
 		$orders = $stmt->fetchAll();
 		view('user/orders', compact('orders'));
 	}

@@ -7,11 +7,11 @@ class DocsController
         'getting-started' => '01-getting-started.md',
         'user-guide' => '02-user-guide.md',
         'organizer-guide' => '03-organizer-guide.md',
-        'admin-guide' => '04-admin-guide.md',
         'partners-guide' => '05-partners-guide.md',
         'scanner-guide' => '06-scanner-guide.md',
         'email-sms-templates' => '07-email-sms-templates.md',
         'asset-branding' => '08-asset-branding-guidelines.md',
+        'marketing-comms' => '09-marketing-and-comms.md',
     ];
 
     public function index(): void
@@ -20,11 +20,11 @@ class DocsController
             ['slug'=>'getting-started','title'=>'Getting Started'],
             ['slug'=>'user-guide','title'=>'User Guide'],
             ['slug'=>'organizer-guide','title'=>'Organizer Guide'],
-            ['slug'=>'admin-guide','title'=>'Admin Guide'],
             ['slug'=>'partners-guide','title'=>'Partners Guide'],
             ['slug'=>'scanner-guide','title'=>'Scanner Guide'],
             ['slug'=>'email-sms-templates','title'=>'Email & SMS Templates'],
             ['slug'=>'asset-branding','title'=>'Asset & Branding Guidelines'],
+            ['slug'=>'marketing-comms','title'=>'Marketing & Communications'],
         ];
         view('docs/index', compact('items'));
     }

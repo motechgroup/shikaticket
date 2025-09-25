@@ -165,6 +165,14 @@ class EventController
         redirect(base_url('/organizer/events'));
 	}
 
+	public function publicIndex(): void
+	{
+		// Get all published events
+		$stmt = db()->query('SELECT e.*, o.full_name as organizer_name FROM events e JOIN organizers o ON o.id = e.organizer_id WHERE e.is_published = 1 ORDER BY e.event_date ASC, e.event_time ASC');
+		$events = $stmt->fetchAll();
+		view('events/index', compact('events'));
+	}
+
 	public function show(): void
 	{
 		$id = (int)($_GET['id'] ?? 0);

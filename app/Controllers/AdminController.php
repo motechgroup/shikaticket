@@ -35,6 +35,7 @@ class AdminController
 		$adminPass = Setting::get('admin.password', getenv('ADMIN_PASSWORD') ?: 'admin123');
 		if ($email === $adminEmail && $password === $adminPass) {
 			$_SESSION['admin'] = $email;
+			$_SESSION['admin_id'] = 1; // Set admin ID for tracking assignments
 			$_SESSION['role'] = 'admin';
 			redirect(base_url('/admin'));
 		}
@@ -433,9 +434,11 @@ class AdminController
 	public function scans(): void
 	{
 		require_admin();
-		$scans = db()->query('SELECT t.code, t.redeemed_at, o.full_name AS organizer, e.title AS event_title FROM tickets t JOIN order_items oi ON oi.id=t.order_item_id JOIN events e ON e.id=oi.event_id LEFT JOIN organizers o ON o.id=t.redeemed_by WHERE t.status="redeemed" ORDER BY t.redeemed_at DESC')->fetchAll();
+		$scans = db()->query('SELECT t.code, t.tier, t.redeemed_at, o.full_name AS organizer, e.title AS event_title, e.venue, sd.device_name, sd.device_code FROM tickets t JOIN order_items oi ON oi.id=t.order_item_id JOIN events e ON e.id=oi.event_id LEFT JOIN organizers o ON o.id=t.redeemed_by LEFT JOIN scanner_devices sd ON sd.id=t.scanner_device_id WHERE t.status="redeemed" ORDER BY t.redeemed_at DESC')->fetchAll();
 		view('admin/scans', compact('scans'));
 	}
+
+	// Scanner assignment methods removed - organizers manage their own devices
 
 	public function settings(): void
 	{
@@ -529,6 +532,46 @@ class AdminController
         flash_set('success', 'Settings saved.');
         redirect(base_url('/admin/settings'));
 	}
+
+    public function sendTestEmail(): void
+    {
+        require_admin();
+        $to = trim($_POST['test_email'] ?? '');
+        if ($to === '') { flash_set('error', 'Enter a valid email.'); redirect(base_url('/admin/settings')); }
+        try {
+            $mailer = new \App\Services\Mailer();
+            $fromName = \App\Models\Setting::get('smtp.from_name', \App\Models\Setting::get('site.name', 'Ticko'));
+            $subject = 'Test Email from ' . $fromName;
+            $html = '<h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>';
+            $ok = $mailer->send($to, $subject, $html);
+            if ($ok) { flash_set('success', 'Test email sent to ' . $to); }
+            else { flash_set('error', 'Failed to send test email. Check SMTP credentials.'); }
+        } catch (\Throwable $e) {
+            flash_set('error', 'Mailer error: ' . $e->getMessage());
+        }
+        redirect(base_url('/admin/settings'));
+    }
+
+    public function restoreMpesaFromEnv(): void
+    {
+        require_admin();
+        // Restore from environment variables if defined; otherwise keep existing values
+        $map = [
+            'payments.mpesa.consumer_key' => getenv('MPESA_CONSUMER_KEY') ?: '',
+            'payments.mpesa.consumer_secret' => getenv('MPESA_CONSUMER_SECRET') ?: '',
+            'payments.mpesa.shortcode' => getenv('MPESA_SHORTCODE') ?: '',
+            'payments.mpesa.passkey' => getenv('MPESA_PASSKEY') ?: '',
+            'payments.mpesa.env' => getenv('MPESA_ENV') ?: '',
+            'payments.mpesa.callback_url' => getenv('MPESA_CALLBACK_URL') ?: ''
+        ];
+        $count = 0;
+        foreach ($map as $k => $v) {
+            if ($v !== '') { \App\Models\Setting::set($k, $v); $count++; }
+        }
+        if ($count > 0) { flash_set('success', 'M-Pesa credentials restored from environment.'); }
+        else { flash_set('error', 'No M-Pesa env vars found. Please re-enter credentials and Save.'); }
+        redirect(base_url('/admin/settings'));
+    }
 
 	public function emailTemplates(): void
 	{

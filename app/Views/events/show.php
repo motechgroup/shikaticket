@@ -112,4 +112,82 @@
 	</div>
 </div>
 
+<?php
+// JSON-LD Event schema for SEO (minimal but valid)
+try {
+    $ev = $event ?? [];
+    $name = $ev['title'] ?? '';
+    $startDate = trim(($ev['event_date'] ?? '') . (empty($ev['event_time']) ? '' : ('T' . $ev['event_time'])));
+    $locationName = $ev['venue'] ?? '';
+    // Pick a representative price (lowest available)
+    $prices = [];
+    foreach (['early_bird_price','regular_price','price','vip_price','vvip_price','group_price'] as $k) {
+        if (isset($ev[$k]) && $ev[$k] !== null && $ev[$k] !== '') { $prices[] = (float)$ev[$k]; }
+    }
+    $price = !empty($prices) ? min($prices) : 0.0;
+    $currency = $ev['currency'] ?? 'KES';
+    $image = !empty($ev['poster_path']) ? base_url($ev['poster_path']) : base_url('logo.png');
+    $url = base_url('/events/show?id='.(int)($ev['id'] ?? 0));
+    $orgName = '';
+    try { if (!empty($ev['organizer_id'])) { $q=db()->prepare('SELECT full_name FROM organizers WHERE id = ?'); $q->execute([(int)$ev['organizer_id']]); $orgName = $q->fetch()['full_name'] ?? ''; } } catch (\Throwable $e) {}
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Event',
+        'name' => $name,
+        'startDate' => $startDate,
+        'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+        'eventStatus' => 'https://schema.org/EventScheduled',
+        'url' => $url,
+        'image' => [$image],
+        'location' => [
+            '@type' => 'Place',
+            'name' => $locationName
+        ],
+        'organizer' => [
+            '@type' => 'Organization',
+            'name' => $orgName
+        ],
+        'offers' => [
+            '@type' => 'Offer',
+            'price' => number_format($price, 2, '.', ''),
+            'priceCurrency' => $currency,
+            'availability' => 'https://schema.org/InStock',
+            'url' => $url
+        ]
+    ];
+    echo "\n<script type=\"application/ld+json\">" . json_encode($schema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . "</script>\n";
+} catch (\Throwable $e) {}
+?>
+
+<?php
+// Breadcrumbs JSON-LD for event page
+try {
+    $crumbs = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => 'Home',
+                'item' => base_url('/')
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => 'Events',
+                'item' => base_url('/events')
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 3,
+                'name' => $event['title'] ?? 'Event',
+                'item' => base_url('/events/show?id='.(int)($event['id'] ?? 0))
+            ]
+        ]
+    ];
+    echo "\n<script type=\"application/ld+json\">" . json_encode($crumbs, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . "</script>\n";
+} catch (\Throwable $e) {}
+?>
+
 

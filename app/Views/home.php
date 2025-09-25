@@ -53,6 +53,7 @@
                     <?php if (!empty($event['poster_path'])): ?>
                         <div class="relative pt-[100%] bg-black">
                             <span class="absolute top-2 left-2 z-10 text-[11px] md:text-xs bg-red-600 text-white rounded px-2 py-1"><?php echo htmlspecialchars($event['event_date'] ?? ''); ?></span>
+                            <?php if (!empty($event['category'])): ?><span class="absolute top-2 right-2 z-10 text-[11px] md:text-xs bg-gray-800 text-white rounded px-2 py-1"><?php echo htmlspecialchars(ucfirst($event['category'])); ?></span><?php endif; ?>
                             <img src="<?php echo base_url($event['poster_path']); ?>" alt="Poster" class="absolute inset-0 w-full h-full object-cover z-0">
                         </div>
                     <?php endif; ?>
@@ -82,6 +83,7 @@
 						<?php if (!empty($event['poster_path'])): ?>
                         <div class="relative rounded mb-3 h-64 bg-black overflow-hidden">
                             <span class="absolute top-2 left-2 z-10 text-[11px] md:text-xs bg-red-600 text-white rounded px-2 py-1"><?php echo htmlspecialchars($event['event_date'] ?? ''); ?></span>
+                            <?php if (!empty($event['category'])): ?><span class="absolute top-2 right-2 z-10 text-[11px] md:text-xs bg-gray-800 text-white rounded px-2 py-1"><?php echo htmlspecialchars(ucfirst($event['category'])); ?></span><?php endif; ?>
                             <img src="<?php echo base_url($event['poster_path']); ?>" alt="Poster" class="absolute inset-0 w-full h-full object-cover z-0">
 							</div>
 						<?php endif; ?>
@@ -102,13 +104,65 @@
 <?php if (!empty($partners)): ?>
 <section class="max-w-6xl mx-auto px-4 py-10">
     <h2 class="text-center text-sm uppercase tracking-wide text-gray-400 mb-4">Our Partners</h2>
-    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6 items-center opacity-90">
+
+    <style>
+      /* Scroll-based slider (no duplication of logos) */
+      .partners-scroll { overflow: hidden; position: relative; }
+      .partners-row { display:flex; align-items:center; gap:2.5rem; padding:0.25rem 0; }
+      .partners-row.center { justify-content:center; }
+      .partners-item { flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+      @media (min-width: 768px){ .partners-row{ gap:3rem; } }
+    </style>
+
+    <div class="partners-scroll opacity-90" id="partnersScroll" aria-label="Partner logos carousel" role="group">
+      <div class="partners-row" id="partnersRow">
         <?php foreach ($partners as $p): ?>
-            <a href="<?php echo htmlspecialchars($p['link_url'] ?? '#'); ?>" target="_blank" class="flex items-center justify-center">
-                <img src="<?php echo base_url($p['image_path']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" class="max-h-10 object-contain grayscale hover:grayscale-0 transition">
-            </a>
+          <a href="<?php echo htmlspecialchars($p['link_url'] ?? '#'); ?>" target="_blank" class="partners-item">
+            <img src="<?php echo base_url($p['image_path']); ?>"
+                 alt="<?php echo htmlspecialchars($p['title']); ?>" 
+                 class="h-10 md:h-12 object-contain grayscale hover:grayscale-0 transition">
+          </a>
         <?php endforeach; ?>
+      </div>
     </div>
+
+    <script>
+    (function(){
+      const wrap = document.getElementById('partnersScroll');
+      const row  = document.getElementById('partnersRow');
+      if(!wrap || !row) return;
+      let raf, lastTs = 0; const speed = 40; // px/sec
+      let paused = false;
+      function step(ts){
+        if(!lastTs) lastTs = ts;
+        const dt = (ts - lastTs) / 1000;
+        lastTs = ts;
+        if(!paused){
+          wrap.scrollLeft += speed * dt;
+          const max = row.scrollWidth - wrap.clientWidth;
+          if (wrap.scrollLeft >= max - 2) {
+            wrap.scrollLeft = 0; // jump back to start (no duplicate logos shown)
+          }
+        }
+        raf = requestAnimationFrame(step);
+      }
+      raf = requestAnimationFrame(step);
+      // Pause on interaction
+      ['mouseenter','focusin','touchstart'].forEach(ev=>wrap.addEventListener(ev, ()=>{ paused = true; }, {passive:true}));
+      ['mouseleave','focusout','touchend'].forEach(ev=>wrap.addEventListener(ev, ()=>{ paused = false; }));
+      // If content width smaller than container, don't animate
+      function check(){
+        const tooSmall = row.scrollWidth <= wrap.clientWidth;
+        if (tooSmall) {
+          paused = true; wrap.scrollLeft = 0; row.classList.add('center');
+        } else {
+          row.classList.remove('center');
+        }
+      }
+      window.addEventListener('load', check);
+      window.addEventListener('resize', check);
+    })();
+    </script>
 </section>
 <?php endif; ?>
 

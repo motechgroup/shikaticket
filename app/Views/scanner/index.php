@@ -1,5 +1,13 @@
+<?php /** @var array $assignedEvents */ ?>
 <div class="max-w-xl mx-auto px-4 py-10">
-    <h1 class="text-2xl font-semibold mb-4">Ticket Scanner</h1>
+    <h1 class="text-2xl font-semibold mb-2">Ticket Scanner</h1>
+    <div class="mb-4 p-3 bg-gray-800 rounded-lg">
+        <div class="text-sm text-gray-400">Device: <?php echo htmlspecialchars($_SESSION['scanner_device_name'] ?? 'Unknown'); ?></div>
+        <div class="text-xs text-gray-500 font-mono uppercase">Code: <?php echo htmlspecialchars(strtoupper($_SESSION['scanner_device_code'] ?? '')); ?></div>
+        <?php if (!empty($assignedEvents)): ?>
+        <div class="text-sm text-gray-400 mt-1">Assigned Events: <?php echo count($assignedEvents); ?></div>
+        <?php endif; ?>
+    </div>
     <div class="card p-6 space-y-4">
 <form id="manualForm" method="get" action="/scanner/verify" onsubmit="return verifyManual(event)">
 			<?php echo csrf_field(); ?>
@@ -18,12 +26,21 @@
 		</div>
 		<video id="preview" class="w-full rounded border border-gray-800"></video>
         <div id="result" class="text-sm"></div>
+        <div id="lastScanInfo" class="mt-3 p-3 bg-gray-800 rounded-lg hidden">
+            <div class="text-xs text-gray-400 mb-1">Last Scan:</div>
+            <div id="lastScanEvent" class="font-semibold"></div>
+            <div id="lastScanType" class="text-red-400 font-bold"></div>
+        </div>
 	</div>
     <!-- Popup modal -->
     <div id="scanPopup" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50">
         <div class="transform transition-all scale-95 opacity-0 bg-[#0f0f10] border border-gray-800 rounded-xl p-6 w-[90%] max-w-sm text-center shadow-2xl" id="scanPopupCard">
             <div id="scanPopupBadge" class="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3">Status</div>
-            <div id="scanPopupMsg" class="text-lg font-semibold mb-4">Message</div>
+            <div id="scanPopupMsg" class="text-lg font-semibold mb-2">Message</div>
+            <div id="scanPopupDetails" class="text-sm text-gray-300 mb-4 hidden">
+                <div id="scanPopupEvent" class="mb-1"></div>
+                <div id="scanPopupTicketType" class="font-semibold text-red-400"></div>
+            </div>
             <button id="scanPopupClose" class="btn btn-primary w-full">Close</button>
         </div>
     </div>
@@ -124,13 +141,45 @@ function showScanPopup(resp){
   const modal=document.getElementById('scanPopup');
   const badge=document.getElementById('scanPopupBadge');
   const msg=document.getElementById('scanPopupMsg');
+  const details=document.getElementById('scanPopupDetails');
+  const event=document.getElementById('scanPopupEvent');
+  const ticketType=document.getElementById('scanPopupTicketType');
   const card=document.getElementById('scanPopupCard');
   const close=document.getElementById('scanPopupClose');
   const text=(resp?.msg||'').toLowerCase();
   let theme=''; let label='';
-  if(resp.ok){ label='Confirmed'; theme='background:#052e16;border:1px solid #14532d;color:#86efac'; }
-  else if(text.includes('redeemed')){ label='Already Redeemed'; theme='background:#1f2937;border:1px solid #374151;color:#e5e7eb'; }
-  else { label='Rejected'; theme='background:#450a0a;border:1px solid #7f1d1d;color:#fecaca'; }
+  
+  if(resp.ok){ 
+    label='Confirmed'; 
+    theme='background:#052e16;border:1px solid #14532d;color:#86efac'; 
+    // Show ticket details for successful scans
+    if(resp.ticket_type && resp.event_title){
+      details.classList.remove('hidden');
+      event.textContent = resp.event_title;
+      ticketType.textContent = resp.ticket_type + ' Ticket';
+      
+      // Update last scan info
+      const lastScanInfo = document.getElementById('lastScanInfo');
+      const lastScanEvent = document.getElementById('lastScanEvent');
+      const lastScanType = document.getElementById('lastScanType');
+      if(lastScanInfo && lastScanEvent && lastScanType){
+        lastScanInfo.classList.remove('hidden');
+        lastScanEvent.textContent = resp.event_title;
+        lastScanType.textContent = resp.ticket_type + ' Ticket';
+      }
+    }
+  }
+  else if(text.includes('redeemed')){ 
+    label='Already Redeemed'; 
+    theme='background:#1f2937;border:1px solid #374151;color:#e5e7eb'; 
+    details.classList.add('hidden');
+  }
+  else { 
+    label='Rejected'; 
+    theme='background:#450a0a;border:1px solid #7f1d1d;color:#fecaca'; 
+    details.classList.add('hidden');
+  }
+  
   badge.setAttribute('style', theme);
   badge.textContent=label;
   msg.textContent=resp.msg || '';

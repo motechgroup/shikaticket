@@ -45,8 +45,8 @@ class CheckoutController
 			$stmt->execute([$_SESSION['user_id'], $total, $currency, 'pending']);
 			$orderId = (int)$pdo->lastInsertId();
 
-			$stmt = $pdo->prepare('INSERT INTO order_items (order_id, event_id, quantity, unit_price) VALUES (?, ?, ?, ?)');
-			$stmt->execute([$orderId, $eventId, $quantity, $unit]);
+			$stmt = $pdo->prepare('INSERT INTO order_items (order_id, event_id, quantity, unit_price, tier) VALUES (?, ?, ?, ?, ?)');
+			$stmt->execute([$orderId, $eventId, $quantity, $unit, $tier]);
 			$pdo->commit();
 		} catch (\Throwable $e) {
 			$pdo->rollBack();

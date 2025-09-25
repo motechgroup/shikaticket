@@ -4,7 +4,8 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title><?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?></title>
+	<?php $siteTitle = \App\Models\Setting::get('site.name', 'Ticko'); ?>
+	<title><?php echo htmlspecialchars($siteTitle); ?></title>
 	<script>
 		// Tailwind CDN config: extend with brand colors
 		tailwind = window.tailwind || {}; tailwind.config = {
@@ -12,8 +13,22 @@
 		};
 	</script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <?php $siteLogo = \App\Models\Setting::get('site.logo', 'logo.png'); $siteFavicon = \App\Models\Setting::get('site.favicon', $siteLogo); $siteTitle = \App\Models\Setting::get('site.name', 'Ticko'); ?>
-    <link rel="icon" href="<?php echo base_url($siteFavicon); ?>">
+    <?php 
+    $siteLogo = \App\Models\Setting::get('site.logo', 'logo.png'); 
+    $siteFavicon = \App\Models\Setting::get('site.favicon', $siteLogo);
+    $siteTitle = \App\Models\Setting::get('site.name', 'Ticko'); 
+    // Build favicon URL with cache-busting when file exists
+    $faviconRel = ltrim($siteFavicon, '/');
+    $publicRoot = __DIR__ . '/../../public/';
+    $absIcon = $publicRoot . $faviconRel;
+    $faviconUrl = base_url($siteFavicon);
+    if (@file_exists($absIcon)) {
+        $faviconUrl = base_url($siteFavicon . '?v=' . @filemtime($absIcon));
+    }
+    ?>
+    <link rel="icon" href="<?php echo $faviconUrl; ?>" type="image/png">
+    <link rel="shortcut icon" href="<?php echo $faviconUrl; ?>" type="image/png">
+    <link rel="apple-touch-icon" href="<?php echo $faviconUrl; ?>">
     <?php 
         $metaTitle = \App\Models\Setting::get('seo.meta_title', $siteTitle);
         $metaDesc = \App\Models\Setting::get('seo.meta_description', \App\Models\Setting::get('site.description',''));
@@ -33,6 +48,10 @@
                     if (!empty($row['poster_path'])) { $ogImage = $row['poster_path']; }
                 }
             } catch (\Throwable $e) {}
+        } elseif ($path === '/events') {
+            // SEO defaults for events listing page
+            $metaTitle = 'Buy Event Tickets in Kenya | Concerts, Comedy & Festivals - ' . $siteTitle;
+            $metaDesc = 'Discover and book tickets for top events in Kenya. Concerts, comedy shows, theatre and more on ' . $siteTitle . '.';
         }
     ?>
     <meta name="title" content="<?php echo htmlspecialchars($metaTitle); ?>">
@@ -43,9 +62,29 @@
     <meta property="og:description" content="<?php echo htmlspecialchars($metaDesc); ?>">
     <meta property="og:image" content="<?php echo base_url($ogImage); ?>">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?php echo htmlspecialchars($siteTitle); ?>">
     <meta property="og:url" content="<?php echo base_url(ltrim($_SERVER['REQUEST_URI'] ?? '/', '/')); ?>">
     <meta name="twitter:card" content="summary_large_image">
     <?php if ($tw): ?><meta name="twitter:site" content="<?php echo htmlspecialchars($tw); ?>"><?php endif; ?>
+    <link rel="canonical" href="<?php echo base_url(ltrim($_SERVER['REQUEST_URI'] ?? '/', '/')); ?>">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": <?php echo json_encode($siteTitle); ?>,
+      "url": <?php echo json_encode(base_url('/')); ?>,
+      "logo": <?php echo json_encode(base_url($siteLogo)); ?>,
+      "sameAs": [
+        <?php 
+          $same = [];
+          $fb = \App\Models\Setting::get('site.facebook',''); if ($fb) $same[] = $fb;
+          $twx = \App\Models\Setting::get('site.twitter',''); if ($twx) $same[] = $twx;
+          $ig = \App\Models\Setting::get('site.instagram',''); if ($ig) $same[] = $ig;
+          echo implode(',', array_map('json_encode', $same));
+        ?>
+      ]
+    }
+    </script>
 	<style>
 		:root{ --bg:#0b0b0b; --card:#111111; --text:#e5e7eb; --muted:#9ca3af; --accent:#ef4444; --accent-600:#dc2626; }
 		body{ background-color:var(--bg); color:var(--text); }
@@ -93,6 +132,7 @@
                 <a href="<?php echo base_url('/admin/settings'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Settings</a>
                 <a href="<?php echo base_url('/admin/email-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Email Templates</a>
                 <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">SMS Templates</a>
+                <a href="<?php echo base_url('/admin/scans'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Scans</a>
                 <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Withdrawals</a>
                 <a href="<?php echo base_url('/admin/profile'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Profile</a>
                 <a href="<?php echo base_url('/logout'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Logout</a>
@@ -113,6 +153,8 @@
                 <a href="<?php echo base_url('/organizer/events'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Events</a>
                 <a href="<?php echo base_url('/organizer/events/create'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Create Event</a>
                 <a href="<?php echo base_url('/organizer/reports'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Revenue & Reports</a>
+                <a href="<?php echo base_url('/organizer/scanner-devices'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Scanner Devices</a>
+                <a href="<?php echo base_url('/organizer/event-scanner-assignments'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Event Scanner Assignments</a>
                 <a href="<?php echo base_url('/organizer/withdrawals'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Withdrawals</a>
                 <a href="<?php echo base_url('/organizer/profile'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Profile</a>
                 <a href="<?php echo base_url('/logout'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Logout</a>
