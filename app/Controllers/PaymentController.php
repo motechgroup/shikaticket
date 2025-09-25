@@ -431,26 +431,90 @@ class PaymentController
             $resp = curl_exec($ch);
             $json = json_decode($resp, true) ?: [];
             $ok = (($json['status'] ?? '') === 'success') && (($json['data']['status'] ?? '') === 'successful');
-            // Extract order id from tx_ref generated as 'ORDER{orderId}-{timestamp}'
+            // Extract order id from tx_ref generated as 'ORDER{orderId}-{timestamp}' or 'TRAVEL{bookingId}-{timestamp}'
             $txRef = $json['data']['tx_ref'] ?? '';
-            $orderId = 0;
-            if (preg_match('/ORDER(\d+)/', $txRef, $m)) { $orderId = (int)($m[1] ?? 0); }
-            if ($ok && $orderId > 0) {
-                // Confirm order exists to avoid null amount insertion
-                $ordStmt = db()->prepare('SELECT total_amount, currency FROM orders WHERE id = ?');
-                $ordStmt->execute([$orderId]);
-                $ord = $ordStmt->fetch();
-                if (!$ord) { flash_set('error', 'Order not found for Flutterwave tx_ref.'); redirect(base_url('/user/orders')); }
-                // Record payment if not already recorded
-                db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                    ->execute([$orderId, 'flutterwave', (string)$txId, $ord['total_amount'], $ord['currency'], 'successful', json_encode($json)]);
-                db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['paid', $orderId]);
-                $this->generateTicketsAndSendEmails($orderId);
-                flash_set('success', 'Flutterwave payment completed.');
-                redirect(base_url('/user/orders?order_id=' . $orderId));
+            
+            // Check if this is a travel booking
+            if (preg_match('/TRAVEL(\d+)/', $txRef, $m)) {
+                $bookingId = (int)($m[1] ?? 0);
+                
+                if ($ok && $bookingId > 0) {
+                    // Get travel booking details
+                    $stmt = db()->prepare('
+                        SELECT tb.*, tp.id as payment_id, ta.company_name, ta.commission_rate, ta.id as agency_id
+                        FROM travel_bookings tb
+                        JOIN travel_destinations td ON td.id = tb.destination_id
+                        JOIN travel_agencies ta ON ta.id = td.agency_id
+                        LEFT JOIN travel_payments tp ON tp.booking_id = tb.id AND tp.id = (
+                            SELECT MAX(id) FROM travel_payments WHERE booking_id = tb.id
+                        )
+                        WHERE tb.id = ?
+                    ');
+                    $stmt->execute([$bookingId]);
+                    $booking = $stmt->fetch();
+                    
+                    if ($booking) {
+                        // Calculate commission
+                        $commissionRate = (float)($booking['commission_rate'] ?? 0);
+                        $commissionAmount = ($booking['total_amount'] * $commissionRate) / 100;
+                        $netAmount = $booking['total_amount'] - $commissionAmount;
+                        
+                        // Update or create payment record
+                        if ($booking['payment_id']) {
+                            db()->prepare('UPDATE travel_payments SET payment_status = ?, transaction_reference = ?, paid_at = NOW() WHERE id = ?')
+                                ->execute(['paid', (string)$txId, $booking['payment_id']]);
+                        } else {
+                            db()->prepare('
+                                INSERT INTO travel_payments 
+                                (booking_id, agency_id, amount, currency, payment_method, payment_status, 
+                                 commission_amount, agency_amount, transaction_reference, paid_at) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                            ')->execute([
+                                $bookingId, $booking['agency_id'], $booking['total_amount'], 
+                                $booking['currency'], 'flutterwave', 'paid', $commissionAmount, 
+                                $netAmount, (string)$txId
+                            ]);
+                        }
+                        
+                        // Update booking status
+                        db()->prepare('UPDATE travel_bookings SET status = ? WHERE id = ?')
+                            ->execute(['confirmed', $bookingId]);
+                        
+                        // Send confirmation email
+                        $this->sendTravelBookingConfirmation($bookingId);
+                        
+                        flash_set('success', 'Flutterwave payment completed! Your travel booking is confirmed.');
+                        redirect(base_url('/user/travel-bookings/show?id=' . $bookingId . '&payment_success=1'));
+                    } else {
+                        flash_set('error', 'Travel booking not found for Flutterwave tx_ref.');
+                        redirect(base_url('/user/travel-bookings'));
+                    }
+                } else {
+                    flash_set('error', 'Flutterwave verification failed for travel booking.');
+                    redirect(base_url('/user/travel-bookings'));
+                }
+            } else {
+                // Regular order processing
+                $orderId = 0;
+                if (preg_match('/ORDER(\d+)/', $txRef, $m)) { $orderId = (int)($m[1] ?? 0); }
+                if ($ok && $orderId > 0) {
+                    // Confirm order exists to avoid null amount insertion
+                    $ordStmt = db()->prepare('SELECT total_amount, currency FROM orders WHERE id = ?');
+                    $ordStmt->execute([$orderId]);
+                    $ord = $ordStmt->fetch();
+                    if (!$ord) { flash_set('error', 'Order not found for Flutterwave tx_ref.'); redirect(base_url('/user/orders')); }
+                    // Record payment if not already recorded
+                    db()->prepare('INSERT INTO payments (order_id, provider, provider_ref, amount, currency, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                        ->execute([$orderId, 'flutterwave', (string)$txId, $ord['total_amount'], $ord['currency'], 'successful', json_encode($json)]);
+                    db()->prepare('UPDATE orders SET status = ? WHERE id = ?')->execute(['paid', $orderId]);
+                    $this->generateTicketsAndSendEmails($orderId);
+                    flash_set('success', 'Flutterwave payment completed.');
+                    redirect(base_url('/user/orders/show?id=' . $orderId . '&payment_success=1'));
+                } else {
+                    flash_set('error', 'Flutterwave verification failed.');
+                    redirect(base_url('/user/orders'));
+                }
             }
-            flash_set('error', 'Flutterwave verification failed.');
-            redirect(base_url('/user/orders'));
         }
 
         // Otherwise: create payment and redirect to hosted checkout
@@ -524,7 +588,26 @@ class PaymentController
 			if (($it['Name'] ?? '') === 'Amount') { $amount = $it['Value'] ?? null; }
 			if (($it['Name'] ?? '') === 'MpesaReceiptNumber') { $mpesaRef = $it['Value'] ?? null; }
 		}
-		// Map payment by checkoutId
+		
+		// Check for travel payment first - look by checkout ID or account reference
+		$stmt = db()->prepare("SELECT * FROM travel_payments WHERE payment_method = 'mpesa' AND (transaction_reference = ? OR transaction_reference LIKE ?) ORDER BY id DESC LIMIT 1");
+		$stmt->execute([$checkoutId, '%' . $checkoutId . '%']);
+		$travelPayment = $stmt->fetch();
+		
+		// If not found by transaction_reference, try to find by account reference pattern
+		if (!$travelPayment && !empty($stk['MerchantRequestID'])) {
+			$stmt = db()->prepare("SELECT * FROM travel_payments WHERE payment_method = 'mpesa' AND transaction_reference LIKE ? ORDER BY id DESC LIMIT 1");
+			$stmt->execute(['%' . $stk['MerchantRequestID'] . '%']);
+			$travelPayment = $stmt->fetch();
+		}
+		
+		if ($travelPayment) {
+			$this->handleTravelPaymentCallback($travelPayment, $resultCode, $mpesaRef ?: $checkoutId);
+			echo 'OK';
+			return;
+		}
+		
+		// Map payment by checkoutId for regular orders
 		$stmt = db()->prepare("SELECT * FROM payments WHERE provider = 'mpesa' AND provider_ref = ? ORDER BY id DESC LIMIT 1");
 		$stmt->execute([$checkoutId]);
 		$payment = $stmt->fetch();
@@ -632,6 +715,123 @@ class PaymentController
 		}
 		echo 'OK';
 	}
+    
+    private function handleTravelPaymentCallback(array $travelPayment, int $resultCode, string $mpesaRef): void
+    {
+        if ($resultCode === 0) {
+            // Payment successful
+            db()->prepare('UPDATE travel_payments SET payment_status = ?, transaction_reference = ?, paid_at = NOW() WHERE id = ?')
+                ->execute(['paid', $mpesaRef, $travelPayment['id']]);
+            
+            db()->prepare('UPDATE travel_bookings SET status = ? WHERE id = ?')
+                ->execute(['confirmed', $travelPayment['booking_id']]);
+            
+            // Send confirmation email
+            $this->sendTravelBookingConfirmation($travelPayment['booking_id']);
+        } else {
+            // Payment failed
+            db()->prepare('UPDATE travel_payments SET payment_status = ? WHERE id = ?')
+                ->execute(['failed', $travelPayment['id']]);
+        }
+    }
+    
+    private function sendTravelBookingConfirmation(int $bookingId): void
+    {
+        try {
+            $stmt = db()->prepare('
+                SELECT tb.*, td.title as destination_title, td.departure_date, td.departure_location,
+                       ta.company_name, ta.contact_person, ta.email as agency_email, ta.phone as agency_phone,
+                       u.name, u.email as user_email, u.phone as user_phone
+                FROM travel_bookings tb
+                JOIN travel_destinations td ON td.id = tb.destination_id
+                JOIN travel_agencies ta ON ta.id = td.agency_id
+                JOIN users u ON u.id = tb.user_id
+                WHERE tb.id = ?
+            ');
+            $stmt->execute([$bookingId]);
+            $booking = $stmt->fetch();
+            
+            if (!$booking) return;
+            
+            // Generate travel ticket code
+            $ticketCode = substr(str_shuffle('0123456789'), 0, 6);
+            
+            // Create travel ticket record
+            $stmt = db()->prepare('
+                INSERT INTO travel_tickets (booking_id, ticket_code, status, created_at) 
+                VALUES (?, ?, "valid", NOW())
+            ');
+            $stmt->execute([$bookingId, $ticketCode]);
+            
+            // Send email confirmation
+            $mailer = new \App\Services\Mailer();
+            $subject = 'Travel Booking Confirmation - ' . $booking['destination_title'];
+            
+            $html = "
+                <h2>Travel Booking Confirmation</h2>
+                <p>Dear " . htmlspecialchars($booking['name']) . ",</p>
+                <p>Your travel booking has been confirmed successfully!</p>
+                
+                <h3>Booking Details</h3>
+                <ul>
+                    <li><strong>Destination:</strong> " . htmlspecialchars($booking['destination_title']) . "</li>
+                    <li><strong>Departure Date:</strong> " . date('M j, Y', strtotime($booking['departure_date'])) . "</li>
+                    <li><strong>Departure Location:</strong> " . htmlspecialchars($booking['departure_location']) . "</li>
+                    <li><strong>Participants:</strong> " . $booking['participants_count'] . " person(s)</li>
+                    <li><strong>Total Amount:</strong> " . $booking['currency'] . " " . number_format($booking['total_amount'], 2) . "</li>
+                    <li><strong>Ticket Code:</strong> " . $ticketCode . "</li>
+                </ul>
+                
+                <h3>Travel Agency Contact</h3>
+                <ul>
+                    <li><strong>Agency:</strong> " . htmlspecialchars($booking['company_name']) . "</li>
+                    <li><strong>Contact Person:</strong> " . htmlspecialchars($booking['contact_person']) . "</li>
+                    <li><strong>Email:</strong> " . htmlspecialchars($booking['agency_email']) . "</li>
+                    <li><strong>Phone:</strong> " . htmlspecialchars($booking['agency_phone']) . "</li>
+                </ul>
+                
+                <p>Please keep this confirmation email and your ticket code for your travel.</p>
+                <p>Thank you for choosing our travel services!</p>
+            ";
+            
+            $mailer->send($booking['user_email'], $subject, $html);
+            
+            // Send SMS notification
+            try {
+                $sms = new \App\Services\Sms();
+                if ($sms->isConfigured()) {
+                    // Generate public ticket link (no login required)
+                    $ticketLink = base_url('/travel-tickets/view?code=' . $ticketCode);
+                    
+                    // Use SMS template
+                    $message = \App\Services\SmsTemplates::render('travel_booking_confirmed', [
+                        'destination' => $booking['destination_title'],
+                        'ticket_code' => $ticketCode,
+                        'booking_reference' => $booking['booking_reference'] ?? $booking['id'],
+                        'ticket_link' => $ticketLink,
+                        'agency_name' => $booking['company_name'],
+                        'agency_phone' => $booking['agency_phone']
+                    ]);
+                    
+                    // Fallback if no template is configured
+                    if ($message === '') {
+                        $message = "Travel booking confirmed! Destination: " . $booking['destination_title'] . 
+                                  ". Ticket Code: " . $ticketCode . 
+                                  ". View ticket: " . $ticketLink .
+                                  ". Contact: " . $booking['company_name'] . " at " . $booking['agency_phone'];
+                    }
+                    
+                    $sms->send($booking['user_phone'], $message);
+                }
+            } catch (\Throwable $e) {
+                // SMS sending failed, but email was sent
+                error_log("SMS sending failed for travel booking: " . $e->getMessage());
+            }
+            
+        } catch (\Throwable $e) {
+            // Log error but don't fail the callback
+        }
+    }
 }
 
 

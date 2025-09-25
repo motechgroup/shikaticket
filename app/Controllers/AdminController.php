@@ -438,6 +438,59 @@ class AdminController
 		view('admin/scans', compact('scans'));
 	}
 
+    // --- Travel Module ---
+    public function travelAgencies(): void
+    {
+        require_admin();
+        try {
+            $agencies = db()->query('SELECT * FROM travel_agencies ORDER BY created_at DESC')->fetchAll();
+        } catch (\PDOException $e) { $agencies = []; }
+        view('admin/travel_agencies', compact('agencies'));
+    }
+
+    public function approveTravelAgency(): void
+    {
+        require_admin(); verify_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            db()->prepare('UPDATE travel_agencies SET is_approved = 1 WHERE id = ?')->execute([$id]);
+            flash_set('success', 'Agency approved.');
+        }
+        redirect(base_url('/admin/travel/agencies'));
+    }
+
+    public function verifyTravelAgencyPhone(): void
+    {
+        require_admin(); verify_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            db()->prepare('UPDATE travel_agencies SET phone_verified = 1 WHERE id = ?')->execute([$id]);
+            flash_set('success', 'Agency phone marked as verified.');
+        }
+        redirect(base_url('/admin/travel/agencies'));
+    }
+
+    public function setTravelAgencyCommission(): void
+    {
+        require_admin(); verify_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $rate = (float)($_POST['commission_rate'] ?? 0);
+        if ($id > 0) {
+            db()->prepare('UPDATE travel_agencies SET commission_rate = ? WHERE id = ?')->execute([$rate, $id]);
+            flash_set('success', 'Commission updated.');
+        }
+        redirect(base_url('/admin/travel/agencies'));
+    }
+
+    public function travelDestinations(): void
+    {
+        require_admin();
+        try {
+            $rows = db()->query('SELECT td.*, ta.company_name FROM travel_destinations td JOIN travel_agencies ta ON ta.id = td.agency_id ORDER BY td.created_at DESC')->fetchAll();
+        } catch (\PDOException $e) { $rows = []; }
+        view('admin/travel_destinations', ['destinations' => $rows]);
+    }
+
 	// Scanner assignment methods removed - organizers manage their own devices
 
 	public function settings(): void
@@ -820,6 +873,172 @@ class AdminController
         $active = (int)($_POST['is_active'] ?? 1);
         if ($id > 0) { db()->prepare('UPDATE partner_logos SET is_active = ? WHERE id = ?')->execute([$active, $id]); }
         redirect(base_url('/admin/partner-logos'));
+    }
+
+    // Travel Banners Management
+    public function travelBanners(): void
+    {
+        require_admin();
+        try {
+            $banners = db()->query('SELECT * FROM travel_banners ORDER BY sort_order ASC, created_at DESC')->fetchAll();
+        } catch (\PDOException $e) { $banners = []; }
+        view('admin/travel_banners', compact('banners'));
+    }
+
+    public function travelBannerCreate(): void
+    {
+        require_admin();
+        view('admin/travel_banner_create');
+    }
+
+    public function travelBannerStore(): void
+    {
+        require_admin();
+        $title = trim($_POST['title'] ?? '');
+        $subtitle = trim($_POST['subtitle'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $buttonText = trim($_POST['button_text'] ?? '');
+        $buttonUrl = trim($_POST['button_url'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if ($title === '') {
+            flash_set('error', 'Title is required.');
+            redirect(base_url('/admin/travel-banners/create'));
+        }
+
+        // Handle image upload
+        $imagePath = '';
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../../public/uploads/travel/banners/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $filename = 'travel_banner_' . time() . '_' . rand(1000, 9999) . '.' . $extension;
+            $uploadPath = $uploadDir . $filename;
+            
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
+                $imagePath = 'uploads/travel/banners/' . $filename;
+            }
+        }
+
+        if ($imagePath === '') {
+            flash_set('error', 'Image is required.');
+            redirect(base_url('/admin/travel-banners/create'));
+        }
+
+        try {
+            $stmt = db()->prepare('
+                INSERT INTO travel_banners (title, subtitle, description, image_path, button_text, button_url, sort_order) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([$title, $subtitle, $description, $imagePath, $buttonText, $buttonUrl, $sortOrder]);
+            flash_set('success', 'Travel banner created successfully.');
+        } catch (\PDOException $e) {
+            flash_set('error', 'Failed to create travel banner.');
+        }
+        redirect(base_url('/admin/travel-banners'));
+    }
+
+    public function travelBannerEdit(): void
+    {
+        require_admin();
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) { redirect(base_url('/admin/travel-banners')); }
+        
+        try {
+            $stmt = db()->prepare('SELECT * FROM travel_banners WHERE id = ?');
+            $stmt->execute([$id]);
+            $banner = $stmt->fetch();
+            if (!$banner) { redirect(base_url('/admin/travel-banners')); }
+        } catch (\PDOException $e) { redirect(base_url('/admin/travel-banners')); }
+        
+        view('admin/travel_banner_edit', compact('banner'));
+    }
+
+    public function travelBannerUpdate(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $subtitle = trim($_POST['subtitle'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $buttonText = trim($_POST['button_text'] ?? '');
+        $buttonUrl = trim($_POST['button_url'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if ($id <= 0 || $title === '') {
+            flash_set('error', 'Invalid data.');
+            redirect(base_url('/admin/travel-banners'));
+        }
+
+        // Get current banner
+        try {
+            $stmt = db()->prepare('SELECT image_path FROM travel_banners WHERE id = ?');
+            $stmt->execute([$id]);
+            $currentBanner = $stmt->fetch();
+            if (!$currentBanner) { redirect(base_url('/admin/travel-banners')); }
+        } catch (\PDOException $e) { redirect(base_url('/admin/travel-banners')); }
+
+        $imagePath = $currentBanner['image_path'];
+
+        // Handle new image upload
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../../public/uploads/travel/banners/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $filename = 'travel_banner_' . time() . '_' . rand(1000, 9999) . '.' . $extension;
+            $uploadPath = $uploadDir . $filename;
+            
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
+                $imagePath = 'uploads/travel/banners/' . $filename;
+            }
+        }
+
+        try {
+            $stmt = db()->prepare('
+                UPDATE travel_banners 
+                SET title = ?, subtitle = ?, description = ?, image_path = ?, button_text = ?, button_url = ?, sort_order = ?
+                WHERE id = ?
+            ');
+            $stmt->execute([$title, $subtitle, $description, $imagePath, $buttonText, $buttonUrl, $sortOrder, $id]);
+            flash_set('success', 'Travel banner updated successfully.');
+        } catch (\PDOException $e) {
+            flash_set('error', 'Failed to update travel banner.');
+        }
+        redirect(base_url('/admin/travel-banners'));
+    }
+
+    public function travelBannerDelete(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            try {
+                db()->prepare('DELETE FROM travel_banners WHERE id = ?')->execute([$id]);
+                flash_set('success', 'Travel banner deleted successfully.');
+            } catch (\PDOException $e) {
+                flash_set('error', 'Failed to delete travel banner.');
+            }
+        }
+        redirect(base_url('/admin/travel-banners'));
+    }
+
+    public function travelBannerToggle(): void
+    {
+        require_admin();
+        $id = (int)($_POST['id'] ?? 0);
+        $active = (int)($_POST['active'] ?? 0);
+        if ($id > 0) {
+            try {
+                db()->prepare('UPDATE travel_banners SET is_active = ? WHERE id = ?')->execute([$active, $id]);
+            } catch (\PDOException $e) {}
+        }
+        redirect(base_url('/admin/travel-banners'));
     }
 }
 

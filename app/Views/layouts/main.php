@@ -134,6 +134,9 @@
                 <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">SMS Templates</a>
                 <a href="<?php echo base_url('/admin/scans'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Scans</a>
                 <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Withdrawals</a>
+                <a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Agencies</a>
+                <a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Destinations</a>
+                <a href="<?php echo base_url('/admin/travel-banners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Banners</a>
                 <a href="<?php echo base_url('/admin/profile'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Profile</a>
                 <a href="<?php echo base_url('/logout'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Logout</a>
             </nav>

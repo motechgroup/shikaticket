@@ -6,7 +6,20 @@ class UserController
 	public function dashboard(): void
 	{
 		require_user();
-		view('user/dashboard');
+		
+		// Check for pending travel bookings with M-Pesa payments
+		$stmt = db()->prepare('
+			SELECT tb.id, tb.status, tp.payment_method, tp.payment_status, tp.transaction_reference
+			FROM travel_bookings tb
+			LEFT JOIN travel_payments tp ON tp.booking_id = tb.id AND tp.id = (SELECT MAX(id) FROM travel_payments WHERE booking_id = tb.id)
+			WHERE tb.user_id = ? AND tb.status = "pending" AND tp.payment_method = "mpesa" AND tp.payment_status = "pending"
+			ORDER BY tb.booking_date DESC
+			LIMIT 1
+		');
+		$stmt->execute([$_SESSION['user_id']]);
+		$pendingBooking = $stmt->fetch();
+		
+		view('user/dashboard', compact('pendingBooking'));
 	}
 
 	public function orders(): void
@@ -84,6 +97,62 @@ class UserController
         $row = $stmt->fetch();
         header('Content-Type: application/json');
         echo json_encode(['status' => $row['status'] ?? 'unknown']);
+    }
+
+    public function travelBookings(): void
+    {
+        require_user();
+        
+        $stmt = db()->prepare('
+            SELECT tb.*, td.title as destination_title, td.departure_date, 
+                   ta.company_name, tp.payment_status
+            FROM travel_bookings tb
+            JOIN travel_destinations td ON td.id = tb.destination_id
+            JOIN travel_agencies ta ON ta.id = td.agency_id
+            LEFT JOIN travel_payments tp ON tp.booking_id = tb.id AND tp.id = (
+                SELECT MAX(id) FROM travel_payments WHERE booking_id = tb.id
+            )
+            WHERE tb.user_id = ?
+            ORDER BY tb.booking_date DESC
+        ');
+        $stmt->execute([$_SESSION['user_id']]);
+        $bookings = $stmt->fetchAll();
+        
+        view('user/travel_bookings', compact('bookings'));
+    }
+
+    public function travelBookingShow(): void
+    {
+        require_user();
+        
+        $id = (int)($_GET['id'] ?? 0);
+        $stmt = db()->prepare('
+            SELECT tb.*, td.title as destination_title, td.destination, td.departure_date, 
+                   td.departure_location, ta.company_name, ta.contact_person, ta.email as agency_email, 
+                   ta.phone as agency_phone
+            FROM travel_bookings tb
+            JOIN travel_destinations td ON td.id = tb.destination_id
+            JOIN travel_agencies ta ON ta.id = td.agency_id
+            WHERE tb.id = ? AND tb.user_id = ?
+        ');
+        $stmt->execute([$id, $_SESSION['user_id']]);
+        $booking = $stmt->fetch();
+        
+        if (!$booking) {
+            redirect(base_url('/user/travel-bookings'));
+        }
+        
+        // Get payment details
+        $stmt = db()->prepare('SELECT * FROM travel_payments WHERE booking_id = ? ORDER BY id DESC');
+        $stmt->execute([$id]);
+        $payments = $stmt->fetchAll();
+        
+        // Get ticket details
+        $stmt = db()->prepare('SELECT * FROM travel_tickets WHERE booking_id = ? ORDER BY id DESC');
+        $stmt->execute([$id]);
+        $tickets = $stmt->fetchAll();
+        
+        view('user/travel_booking_show', compact('booking', 'payments', 'tickets'));
     }
 }
 

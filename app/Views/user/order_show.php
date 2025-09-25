@@ -99,6 +99,49 @@
     });
   });
 })();
+
+// Payment success popup for regular orders
+function showPaymentSuccessPopup() {
+    const popup = document.createElement('div');
+    popup.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    popup.innerHTML = `
+        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+            <div class="text-green-500 text-6xl mb-4">✓</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Payment Successful!</h2>
+            <p class="text-gray-600 mb-6">Your order has been confirmed. You will receive your tickets via email shortly.</p>
+            <button onclick="closePaymentSuccessPopup()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium">
+                Continue
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Auto close after 5 seconds
+    setTimeout(() => {
+        closePaymentSuccessPopup();
+    }, 5000);
+}
+
+function closePaymentSuccessPopup() {
+    const popup = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-50');
+    if (popup) {
+        popup.remove();
+    }
+}
+
+// Check if we should show success popup
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    
+    if (paymentSuccess === '1') {
+        showPaymentSuccessPopup();
+        // Clean up URL
+        const newUrl = window.location.pathname + window.location.search.replace(/[?&]payment_success=1/, '');
+        window.history.replaceState({}, document.title, newUrl);
+    }
+});
 </script>
 
 

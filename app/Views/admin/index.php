@@ -29,6 +29,8 @@
 		<a href="<?php echo base_url('/admin/organizers'); ?>" class="card p-6 hover:border-red-600">Organizers</a>
 		<a href="<?php echo base_url('/admin/events'); ?>" class="card p-6 hover:border-red-600">Events</a>
 		<a href="<?php echo base_url('/admin/banners'); ?>" class="card p-6 hover:border-red-600">Banners</a>
+		<a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="card p-6 hover:border-red-600">Travel Agencies</a>
+		<a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="card p-6 hover:border-red-600">Travel Destinations</a>
 	</div>
 
 	<div class="card p-4">

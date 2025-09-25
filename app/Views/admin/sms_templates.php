@@ -23,6 +23,11 @@
             <textarea class="textarea" name="templates[withdrawal_request]" rows="2"><?php echo htmlspecialchars($templates['withdrawal_request'] ?? ''); ?></textarea>
             <div class="text-xs text-gray-400 mt-1">Placeholders: {{amount}}</div>
         </div>
+        <div>
+            <label class="block text-sm mb-1">Travel Booking Confirmation</label>
+            <textarea class="textarea" name="templates[travel_booking_confirmed]" rows="3"><?php echo htmlspecialchars($templates['travel_booking_confirmed'] ?? 'Travel booking confirmed! Destination: {{destination}}. Ticket Code: {{ticket_code}}. Booking Reference: {{booking_reference}}. View ticket: {{ticket_link}}. Contact: {{agency_name}} at {{agency_phone}}'); ?></textarea>
+            <div class="text-xs text-gray-400 mt-1">Placeholders: {{destination}}, {{ticket_code}}, {{booking_reference}}, {{ticket_link}}, {{agency_name}}, {{agency_phone}}</div>
+        </div>
         <button class="btn btn-primary">Save Templates</button>
     </form>
 </div>

@@ -70,7 +70,36 @@ function verify_csrf(): void {
 function base_url(string $path = ''): string {
 	$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 	$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-	$base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
+	
+	// Fix for localhost with extra dot
+	if ($host === 'localhost.') {
+		$host = 'localhost';
+	}
+	
+	// Handle different environments
+	$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+	
+	// Detect if we're running in a subdirectory by checking if the current request URI contains the path
+	$base = '';
+	
+	// For ngrok or production with subdirectory
+	if (strpos($host, 'ngrok') !== false) {
+		$base = '/ticko/public';
+	} elseif (strpos($requestUri, '/ticko/public/') !== false) {
+		$base = '/ticko/public';
+	} elseif (strpos($scriptName, '/ticko/public/') !== false) {
+		$base = '/ticko/public';
+	} else {
+		// For local development
+		$base = rtrim(dirname($scriptName), '/');
+		// Remove extra dots and ensure clean path
+		$base = str_replace('/..', '', $base);
+		if ($base === '.' || $base === '') {
+			$base = '';
+		}
+	}
+	
 	return $scheme . '://' . $host . $base . '/' . ltrim($path, '/');
 }
 
@@ -88,9 +117,15 @@ function require_user(): void {
 }
 
 function require_organizer(): void {
-	if (!isset($_SESSION['organizer_id'])) {
-		redirect(base_url('/organizer/login'));
-	}
+    if (!isset($_SESSION['organizer_id'])) {
+        redirect(base_url('/organizer/login'));
+    }
+}
+
+function require_travel_agency(): void {
+    if (!isset($_SESSION['travel_agency_id'])) {
+        redirect(base_url('/travel/login'));
+    }
 }
 
 

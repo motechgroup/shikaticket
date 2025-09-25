@@ -36,7 +36,15 @@ $router->get('/events/show', 'EventController@show');
 $router->get('/page', 'PagesController@show');
 $router->get('/partners', 'PartnersController@index');
 $router->post('/partners', 'PartnersController@store');
+$router->get('/travel', 'PagesController@travelIndex');
+$router->get('/travel/destination', 'PagesController@travelDestinationShow');
+$router->post('/travel/booking', 'TravelBookingController@create');
+$router->get('/travel/checkout', 'TravelBookingController@checkout');
+$router->post('/travel/payment', 'TravelBookingController@payment');
+$router->get('/travel/payment/status', 'TravelBookingController@checkPaymentStatus');
+$router->post('/travel/payment/reconcile', 'TravelBookingController@reconcilePayment');
 $router->get('/tickets/view', 'TicketsController@view');
+$router->get('/travel-tickets/view', 'TravelBookingController@viewTicket');
 $router->get('/organizers/show', 'OrganizersController@show');
 $router->post('/organizers/follow', 'OrganizersController@follow');
 $router->post('/organizers/unfollow', 'OrganizersController@unfollow');
@@ -60,6 +68,8 @@ $router->get('/user/orders', 'UserController@orders');
 $router->get('/user/account', 'UserController@account');
 $router->post('/user/account', 'UserController@accountUpdate');
 $router->get('/user/orders/show', 'UserController@orderShow');
+$router->get('/user/travel-bookings', 'UserController@travelBookings');
+$router->get('/user/travel-bookings/show', 'UserController@travelBookingShow');
 $router->get('/orders/status', 'UserController@orderStatus');
 
 // Organizer Auth (email-based login)
@@ -119,6 +129,13 @@ $router->post('/admin/banners/delete', 'AdminController@bannerDelete');
 $router->get('/admin/banners/edit', 'AdminController@bannerEdit');
 $router->post('/admin/banners/update', 'AdminController@bannerUpdate');
 $router->post('/admin/banners/toggle', 'AdminController@bannerToggle');
+$router->get('/admin/travel-banners', 'AdminController@travelBanners');
+$router->get('/admin/travel-banners/create', 'AdminController@travelBannerCreate');
+$router->post('/admin/travel-banners', 'AdminController@travelBannerStore');
+$router->post('/admin/travel-banners/delete', 'AdminController@travelBannerDelete');
+$router->get('/admin/travel-banners/edit', 'AdminController@travelBannerEdit');
+$router->post('/admin/travel-banners/update', 'AdminController@travelBannerUpdate');
+$router->post('/admin/travel-banners/toggle', 'AdminController@travelBannerToggle');
 $router->get('/admin/partner-logos', 'AdminController@partnerLogos');
 $router->get('/admin/partner-logos/create', 'AdminController@partnerLogosCreate');
 $router->post('/admin/partner-logos', 'AdminController@partnerLogosStore');
@@ -132,6 +149,12 @@ $router->post('/admin/events/update', 'AdminController@eventUpdate');
 $router->post('/admin/events/publish', 'AdminController@eventPublish');
 $router->post('/admin/events/feature', 'AdminController@eventFeature');
 $router->post('/admin/events/delete', 'AdminController@eventDelete');
+// Admin — Travel module
+$router->get('/admin/travel/agencies', 'AdminController@travelAgencies');
+$router->post('/admin/travel/agencies/approve', 'AdminController@approveTravelAgency');
+$router->post('/admin/travel/agencies/verify-phone', 'AdminController@verifyTravelAgencyPhone');
+$router->post('/admin/travel/agencies/commission', 'AdminController@setTravelAgencyCommission');
+$router->get('/admin/travel/destinations', 'AdminController@travelDestinations');
 $router->get('/admin/settings', 'AdminController@settings');
 $router->post('/admin/settings', 'AdminController@saveSettings');
 $router->post('/admin/settings/test-email', 'AdminController@sendTestEmail');
@@ -172,6 +195,24 @@ $router->post('/scanner/login', 'ScannerController@login');
 $router->get('/scanner', 'ScannerController@index');
 $router->post('/scanner/verify', 'ScannerController@verify');
 $router->get('/scanner/verify', 'ScannerController@verify');
+
+// Travel Agency routes (subdomain can point to same app; routes prefixed by /travel)
+$router->get('/travel/login', 'TravelAuthController@login');
+$router->post('/travel/login', 'TravelAuthController@login');
+$router->get('/travel/register', 'TravelAuthController@register');
+$router->post('/travel/register', 'TravelAuthController@register');
+$router->post('/travel/logout', 'TravelAuthController@logout');
+$router->get('/travel/dashboard', 'TravelController@dashboard');
+$router->get('/travel/destinations', 'TravelController@destinations');
+$router->get('/travel/destinations/create', 'TravelController@destinationCreate');
+$router->post('/travel/destinations/create', 'TravelController@destinationCreate');
+$router->get('/travel/destinations/edit', 'TravelController@destinationEdit');
+$router->post('/travel/destinations/edit', 'TravelController@destinationEdit');
+$router->get('/travel/bookings', 'TravelController@bookings');
+$router->get('/travel/profile', 'TravelController@profile');
+$router->post('/travel/profile', 'TravelController@profile');
+$router->post('/travel/profile/verify-phone', 'TravelController@startPhoneVerify');
+$router->post('/travel/profile/verify-phone/confirm', 'TravelController@confirmPhoneVerify');
 
 // Dispatch
 $requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

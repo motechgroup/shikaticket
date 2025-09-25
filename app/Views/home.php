@@ -97,8 +97,34 @@
 					</a>
 			<?php endforeach; ?>
 		<?php endif; ?>
-	</div>
+    </div>
 </section>
+
+<!-- Travel Destinations Section -->
+<?php if (!empty($featuredDestinations)): ?>
+<section class="max-w-6xl mx-auto px-4 py-10">
+    <h2 class="text-xl md:text-2xl font-semibold text-center mb-6">Travel Destinations</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 grid-flow-row auto-rows-max">
+        <?php foreach ($featuredDestinations as $destination): ?>
+        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="card card-hover p-3 md:p-4 block">
+            <?php if (!empty($destination['image_path'])): ?>
+                <div class="relative rounded mb-3 h-48 bg-black overflow-hidden">
+                    <span class="absolute top-2 left-2 z-10 text-[11px] md:text-xs bg-blue-600 text-white rounded px-2 py-1"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
+                    <span class="absolute top-2 right-2 z-10 text-[11px] md:text-xs bg-gray-800 text-white rounded px-2 py-1"><?php echo $destination['duration_days']; ?> days</span>
+                    <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="absolute inset-0 w-full h-full object-cover z-0">
+                </div>
+            <?php endif; ?>
+            <h3 class="font-semibold text-base md:text-lg line-clamp-2"><?php echo htmlspecialchars($destination['title']); ?></h3>
+            <p class="text-xs md:text-sm text-gray-400 mt-1 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
+            <div class="flex items-center justify-between mt-2">
+                <p class="text-blue-400 font-semibold text-sm md:text-base"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></p>
+                <span class="text-xs text-gray-400">by <?php echo htmlspecialchars($destination['company_name']); ?></span>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <?php $partners=[]; try { $partners = db()->query("SELECT * FROM partner_logos WHERE is_active=1 ORDER BY sort_order ASC, created_at DESC")->fetchAll(); } catch (\PDOException $e) {} ?>
 <?php if (!empty($partners)): ?>
