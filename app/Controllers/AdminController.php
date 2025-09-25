@@ -11,12 +11,25 @@ class AdminController
         // Finance summary
         $orders = db()->query("SELECT COUNT(*) AS total_orders, SUM(total_amount) AS gross FROM orders WHERE status='paid'")->fetch();
         $byCurrency = db()->query("SELECT currency, SUM(total_amount) AS gross FROM orders WHERE status='paid' GROUP BY currency")->fetchAll();
-        $pendingWithdrawals = db()->query("SELECT w.*, o.full_name FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id WHERE w.status='requested' ORDER BY w.created_at DESC")->fetchAll();
+        $pendingWithdrawals = db()->query("
+            SELECT w.*, 
+                   o.full_name as organizer_name,
+                   ta.company_name as agency_name
+            FROM withdrawals w 
+            LEFT JOIN organizers o ON o.id = w.organizer_id 
+            LEFT JOIN travel_agencies ta ON ta.id = w.travel_agency_id
+            WHERE w.status='requested' ORDER BY w.created_at DESC
+        ")->fetchAll();
         // Platform revenue from commissions
         $commissionRevenue = 0.0;
         try {
+            // Event commissions
             $rows = db()->query("SELECT e.organizer_id, o.commission_percent, SUM(oi.quantity*oi.unit_price) AS gross FROM order_items oi JOIN orders ord ON ord.id=oi.order_id AND ord.status='paid' JOIN events e ON e.id=oi.event_id JOIN organizers o ON o.id=e.organizer_id GROUP BY e.organizer_id, o.commission_percent")->fetchAll();
             foreach ($rows as $r) { $commissionRevenue += ((float)($r['commission_percent'] ?? 0) / 100.0) * (float)($r['gross'] ?? 0); }
+            
+            // Travel agency commissions
+            $travelRows = db()->query("SELECT td.agency_id, ta.commission_percent, SUM(CASE WHEN tp.payment_status='paid' THEN tb.total_amount ELSE 0 END) AS gross FROM travel_destinations td JOIN travel_bookings tb ON tb.destination_id = td.id JOIN travel_payments tp ON tp.booking_id = tb.id JOIN travel_agencies ta ON ta.id = td.agency_id GROUP BY td.agency_id, ta.commission_percent")->fetchAll();
+            foreach ($travelRows as $r) { $commissionRevenue += ((float)($r['commission_percent'] ?? 0) / 100.0) * (float)($r['gross'] ?? 0); }
         } catch (\Throwable $e) {}
         view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue'));
 	}
@@ -697,11 +710,22 @@ class AdminController
         $where = '';
         $params = [];
         if ($q !== '') {
-            $where = 'WHERE (w.status LIKE ? OR o.full_name LIKE ?)';
+            $where = 'WHERE (w.status LIKE ? OR o.full_name LIKE ? OR ta.company_name LIKE ?)';
             $like = '%' . $q . '%';
-            $params = [$like, $like];
+            $params = [$like, $like, $like];
         }
-        $stmt = db()->prepare('SELECT w.*, o.full_name, o.phone FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id ' . $where . ' ORDER BY w.created_at DESC');
+        $stmt = db()->prepare('
+            SELECT w.*, 
+                   o.full_name as organizer_name, o.phone as organizer_phone,
+                   ta.company_name as agency_name, ta.phone as agency_phone,
+                   e.title as event_title, td.title as destination_title
+            FROM withdrawals w 
+            LEFT JOIN organizers o ON o.id = w.organizer_id 
+            LEFT JOIN travel_agencies ta ON ta.id = w.travel_agency_id
+            LEFT JOIN events e ON e.id = w.event_id
+            LEFT JOIN travel_destinations td ON td.id = w.destination_id
+            ' . $where . ' ORDER BY w.created_at DESC
+        ');
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
         view('admin/withdrawals', ['withdrawals' => $rows, 'q' => $q]);
@@ -715,12 +739,12 @@ class AdminController
         if ($id > 0) {
             db()->prepare('UPDATE withdrawals SET status = ?, updated_at = CASE WHEN ? IN ("approved","paid","rejected") THEN NOW() ELSE updated_at END WHERE id = ?')
               ->execute([$status, $status, $id]);
-            // send SMS to organizer
+            // send SMS to organizer or travel agency
             try {
-                $row = db()->prepare('SELECT w.amount, o.phone FROM withdrawals w JOIN organizers o ON o.id = w.organizer_id WHERE w.id = ?');
+                $row = db()->prepare('SELECT w.amount, o.phone as organizer_phone, ta.phone as agency_phone FROM withdrawals w LEFT JOIN organizers o ON o.id = w.organizer_id LEFT JOIN travel_agencies ta ON ta.id = w.travel_agency_id WHERE w.id = ?');
                 $row->execute([$id]);
                 $data = $row->fetch();
-                $phone = $data['phone'] ?? '';
+                $phone = $data['organizer_phone'] ?? $data['agency_phone'] ?? '';
                 if ($phone) {
                     $sms = new \App\Services\Sms();
                     if ($sms->isConfigured()) {

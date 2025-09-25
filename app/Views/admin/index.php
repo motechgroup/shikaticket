@@ -49,7 +49,12 @@
 				<tbody>
 					<?php foreach ($pendingWithdrawals as $w): ?>
 					<tr>
-						<td class="p-3"><?php echo htmlspecialchars($w['full_name']); ?></td>
+						<td class="p-3">
+							<div class="font-medium"><?php echo htmlspecialchars($w['organizer_name'] ?? $w['agency_name'] ?? 'Unknown'); ?></div>
+							<div class="text-xs text-gray-400">
+								<?php echo $w['organizer_name'] ? 'Event Organizer' : 'Travel Agency'; ?>
+							</div>
+						</td>
 						<td class="p-3"><?php echo htmlspecialchars($w['currency']); ?> <?php echo number_format((float)$w['amount'], 2); ?></td>
 						<td class="p-3"><?php echo htmlspecialchars($w['created_at']); ?></td>
 					</tr>

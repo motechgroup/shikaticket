@@ -349,4 +349,107 @@ class TravelController
         }
         redirect(base_url('/travel/profile'));
     }
+    
+    public function withdrawals(): void
+    {
+        require_travel_agency();
+        $agencyId = (int)$_SESSION['travel_agency_id'];
+        
+        // Get withdrawal history
+        $wd = db()->prepare('SELECT w.*, td.title AS destination_title FROM withdrawals w LEFT JOIN travel_destinations td ON td.id = w.destination_id WHERE w.travel_agency_id = ? ORDER BY created_at DESC');
+        $wd->execute([$agencyId]);
+        $withdrawals = $wd->fetchAll();
+        
+        // Get commission percentage
+        $agency = db()->prepare('SELECT commission_percent FROM travel_agencies WHERE id = ?');
+        $agency->execute([$agencyId]);
+        $commission = (float)($agency->fetch()['commission_percent'] ?? 10.0);
+        $commissionRate = max(0.0, min(100.0, $commission)) / 100.0;
+        
+        // Compute available revenue per destination: net = paid revenue - commission - withdrawals(approved/paid)
+        $rows = db()->prepare('SELECT td.id, td.title, COALESCE(SUM(CASE WHEN tp.payment_status="paid" THEN tb.total_amount ELSE 0 END),0) AS gross FROM travel_destinations td LEFT JOIN travel_bookings tb ON tb.destination_id = td.id LEFT JOIN travel_payments tp ON tp.booking_id = tb.id WHERE td.agency_id = ? GROUP BY td.id, td.title ORDER BY td.id DESC');
+        $rows->execute([$agencyId]);
+        $destinations = $rows->fetchAll();
+        
+        $balances = [];
+        foreach ($destinations as $dest) {
+            $destId = (int)$dest['id'];
+            $gross = (float)($dest['gross'] ?? 0);
+            $commissionDue = $gross * $commissionRate;
+            $withdrawn = (float)(db()->query('SELECT COALESCE(SUM(amount),0) AS wsum FROM withdrawals WHERE travel_agency_id='.(int)$agencyId.' AND (destination_id='.(int)$destId.' OR destination_id IS NULL) AND status IN ("approved","paid")')->fetch()['wsum'] ?? 0);
+            $balances[$destId] = max(0, $gross - $commissionDue - $withdrawn);
+        }
+        
+        $overallGross = array_sum(array_column($destinations, 'gross'));
+        $overallCommission = $overallGross * $commissionRate;
+        $overallWithdrawn = (float)(db()->query('SELECT COALESCE(SUM(amount),0) AS wsum FROM withdrawals WHERE travel_agency_id='.(int)$agencyId.' AND status IN ("approved","paid")')->fetch()['wsum'] ?? 0);
+        $overallAvailable = max(0, $overallGross - $overallCommission - $overallWithdrawn);
+        
+        view('travel/withdrawals', compact('withdrawals', 'destinations', 'balances', 'overallAvailable', 'commission'));
+    }
+    
+    public function requestWithdrawal(): void
+    {
+        require_travel_agency();
+        $amount = (float)($_POST['amount'] ?? 0);
+        $destinationId = isset($_POST['destination_id']) && $_POST['destination_id'] !== '' ? (int)$_POST['destination_id'] : null;
+        
+        if ($amount <= 0) { 
+            redirect(base_url('/travel/withdrawals')); 
+        }
+        
+        $agencyId = (int)$_SESSION['travel_agency_id'];
+        
+        // Get commission percentage
+        $agency = db()->prepare('SELECT commission_percent FROM travel_agencies WHERE id = ?');
+        $agency->execute([$agencyId]);
+        $commissionRate = max(0.0, min(100.0, (float)($agency->fetch()['commission_percent'] ?? 10.0))) / 100.0;
+        
+        // Calculate available balance
+        if ($destinationId) {
+            // Per destination withdrawal
+            $revStmt = db()->prepare('SELECT COALESCE(SUM(CASE WHEN tp.payment_status="paid" THEN tb.total_amount ELSE 0 END),0) AS gross FROM travel_bookings tb JOIN travel_destinations td ON td.id = tb.destination_id JOIN travel_payments tp ON tp.booking_id = tb.id WHERE td.agency_id = ? AND td.id = ?');
+            $revStmt->execute([$agencyId, $destinationId]);
+            $gross = (float)($revStmt->fetch()['gross'] ?? 0);
+            $commissionDue = $gross * $commissionRate;
+            $wq = db()->prepare('SELECT COALESCE(SUM(amount),0) AS wsum FROM withdrawals WHERE travel_agency_id = ? AND (destination_id = ? OR destination_id IS NULL) AND status IN ("approved","paid")');
+            $wq->execute([$agencyId, $destinationId]);
+            $withdrawn = (float)($wq->fetch()['wsum'] ?? 0);
+            $available = max(0, $gross - $commissionDue - $withdrawn);
+        } else {
+            // Overall withdrawal
+            $gross = (float)(db()->query('SELECT COALESCE(SUM(CASE WHEN tp.payment_status="paid" THEN tb.total_amount ELSE 0 END),0) AS gross FROM travel_bookings tb JOIN travel_destinations td ON td.id = tb.destination_id JOIN travel_payments tp ON tp.booking_id = tb.id WHERE td.agency_id='.(int)$agencyId)->fetch()['gross'] ?? 0);
+            $commissionDue = $gross * $commissionRate;
+            $withdrawn = (float)(db()->query('SELECT COALESCE(SUM(amount),0) AS wsum FROM withdrawals WHERE travel_agency_id='.(int)$agencyId.' AND status IN ("approved","paid")')->fetch()['wsum'] ?? 0);
+            $available = max(0, $gross - $commissionDue - $withdrawn);
+        }
+        
+        if ($amount > $available + 0.01) { 
+            flash_set('error', 'Amount exceeds available balance'); 
+            redirect(base_url('/travel/withdrawals')); 
+        }
+        
+        // Insert withdrawal request
+        $stmt = db()->prepare('INSERT INTO withdrawals (travel_agency_id, destination_id, amount, currency, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$agencyId, $destinationId, $amount, 'KES', 'requested', trim($_POST['notes'] ?? '')]);
+        
+        flash_set('success', 'Withdrawal request submitted.');
+        
+        // Send SMS notification
+        try {
+            $agencyRow = db()->prepare('SELECT phone FROM travel_agencies WHERE id = ?');
+            $agencyRow->execute([$agencyId]);
+            $phone = $agencyRow->fetch()['phone'] ?? '';
+            $sms = new \App\Services\Sms();
+            if ($phone && $sms->isConfigured()) {
+                $body = \App\Services\SmsTemplates::render('withdrawal_request', ['amount' => number_format($amount, 2)]);
+                if ($body === '') { 
+                    $body = 'Withdrawal request received: KES ' . number_format($amount, 2); 
+                }
+                $sms->send($phone, $body);
+            }
+        } catch (\Throwable $e) {}
+        
+        redirect(base_url('/travel/withdrawals'));
+    }
 }

@@ -208,6 +208,8 @@ $router->get('/travel/destinations/create', 'TravelController@destinationCreate'
 $router->post('/travel/destinations/create', 'TravelController@destinationCreate');
 $router->get('/travel/destinations/edit', 'TravelController@destinationEdit');
 $router->post('/travel/destinations/edit', 'TravelController@destinationEdit');
+$router->get('/travel/withdrawals', 'TravelController@withdrawals');
+$router->post('/travel/withdrawals/request', 'TravelController@requestWithdrawal');
 $router->get('/travel/bookings', 'TravelController@bookings');
 $router->get('/travel/profile', 'TravelController@profile');
 $router->post('/travel/profile', 'TravelController@profile');
