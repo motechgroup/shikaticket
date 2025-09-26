@@ -38,6 +38,7 @@ $router->get('/partners', 'PartnersController@index');
 $router->post('/partners', 'PartnersController@store');
 $router->get('/travel', 'PagesController@travelIndex');
 $router->get('/travel/destination', 'PagesController@travelDestinationShow');
+$router->get('/travel/agency', 'PagesController@travelAgencyShow');
 $router->post('/travel/booking', 'TravelBookingController@create');
 $router->get('/travel/checkout', 'TravelBookingController@checkout');
 $router->post('/travel/payment', 'TravelBookingController@payment');
@@ -50,6 +51,9 @@ $router->post('/organizers/follow', 'OrganizersController@follow');
 $router->post('/organizers/unfollow', 'OrganizersController@unfollow');
 $router->get('/help', 'DocsController@index');
 $router->get('/help/show', 'DocsController@show');
+$router->post('/travel/agency/follow', 'PagesController@travelAgencyFollow');
+$router->post('/travel/agency/unfollow', 'PagesController@travelAgencyUnfollow');
+$router->post('/travel/agency/rate', 'PagesController@travelAgencyRate');
 $router->get('/sitemap.xml', 'SitemapController@index');
 
 // User Auth (phone-based login)
