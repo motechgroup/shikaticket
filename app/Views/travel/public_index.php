@@ -38,43 +38,73 @@
 
   <?php if (!empty($featured)): ?>
   <h2 class="text-xl font-semibold mb-3">Featured</h2>
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mb-8">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8 auto-rows-fr items-stretch">
     <?php foreach ($featured as $d): ?>
-    <a class="card p-3 md:p-4 block" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
-      <?php if (!empty($d['image_path'])): ?><img class="w-full h-40 object-cover rounded mb-2" src="<?php echo base_url($d['image_path']); ?>" alt="img"><?php endif; ?>
-      <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
-      <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
-      <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-      <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+    <a class="group block h-full" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
+      <div class="card card-hover h-full overflow-hidden flex flex-col">
+        <?php if (!empty($d['image_path'])): ?>
+          <div class="relative h-44 bg-gray-900 overflow-hidden">
+            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="<?php echo base_url($d['image_path']); ?>" alt="img">
+          </div>
+        <?php endif; ?>
+        <div class="p-4 flex-1 flex flex-col">
+          <div class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($d['title']); ?></div>
+          <div class="text-gray-400 text-sm mb-3 line-clamp-1"><?php echo htmlspecialchars($d['destination']); ?></div>
+          <div class="mt-auto flex items-center justify-between">
+            <div class="text-blue-400 font-semibold text-base"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
+            <div class="text-gray-500 text-xs">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+          </div>
+        </div>
+      </div>
     </a>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
 
   <h2 class="text-xl font-semibold mb-3">Latest</h2>
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mb-8">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8 auto-rows-fr items-stretch">
     <?php foreach ($latest as $d): ?>
-    <a class="card p-3 md:p-4 block" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
-      <?php if (!empty($d['image_path'])): ?><img class="w-full h-40 object-cover rounded mb-2" src="<?php echo base_url($d['image_path']); ?>" alt="img"><?php endif; ?>
-      <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
-      <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
-      <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-      <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+    <a class="group block h-full" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
+      <div class="card card-hover h-full overflow-hidden flex flex-col">
+        <?php if (!empty($d['image_path'])): ?>
+          <div class="relative h-44 bg-gray-900 overflow-hidden">
+            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="<?php echo base_url($d['image_path']); ?>" alt="img">
+          </div>
+        <?php endif; ?>
+        <div class="p-4 flex-1 flex flex-col">
+          <div class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($d['title']); ?></div>
+          <div class="text-gray-400 text-sm mb-3 line-clamp-1"><?php echo htmlspecialchars($d['destination']); ?></div>
+          <div class="mt-auto flex items-center justify-between">
+            <div class="text-blue-400 font-semibold text-base"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
+            <div class="text-gray-500 text-xs">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+          </div>
+        </div>
+      </div>
     </a>
     <?php endforeach; ?>
   </div>
 
   <h2 class="text-xl font-semibold mb-3">All results</h2>
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 auto-rows-fr items-stretch">
     <?php if (empty($destinations)): ?>
       <div class="col-span-full text-gray-400">No destinations match your filters.</div>
     <?php else: foreach ($destinations as $d): ?>
-      <a class="card p-3 md:p-4 block" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
-        <?php if (!empty($d['image_path'])): ?><img class="w-full h-40 object-cover rounded mb-2" src="<?php echo base_url($d['image_path']); ?>" alt="img"><?php endif; ?>
-        <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
-        <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
-        <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-        <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+      <a class="group block h-full" href="<?php echo base_url('/travel/destination?id=' . $d['id']); ?>">
+        <div class="card card-hover h-full overflow-hidden flex flex-col">
+          <?php if (!empty($d['image_path'])): ?>
+            <div class="relative h-44 bg-gray-900 overflow-hidden">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="<?php echo base_url($d['image_path']); ?>" alt="img">
+            </div>
+          <?php endif; ?>
+          <div class="p-4 flex-1 flex flex-col">
+            <div class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($d['title']); ?></div>
+            <div class="text-gray-400 text-sm mb-3 line-clamp-1"><?php echo htmlspecialchars($d['destination']); ?></div>
+            <div class="mt-auto flex items-center justify-between">
+              <div class="text-blue-400 font-semibold text-base"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
+              <div class="text-gray-500 text-xs">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
+            </div>
+          </div>
+        </div>
       </a>
     <?php endforeach; endif; ?>
   </div>
