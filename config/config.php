@@ -25,8 +25,14 @@ function view(string $path, array $data = []): void {
 }
 
 function redirect(string $to): void {
-	header('Location: ' . $to);
-	exit;
+    // Ensure absolute URL to avoid redirecting to localhost in proxied environments
+    $scheme = parse_url($to, PHP_URL_SCHEME);
+    if ($scheme === null) {
+        // Treat as path; build absolute using base_url
+        $to = base_url($to);
+    }
+    header('Location: ' . $to);
+    exit;
 }
 
 function is_post(): bool { return $_SERVER['REQUEST_METHOD'] === 'POST'; }
