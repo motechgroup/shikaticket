@@ -298,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         <li><a class="link" href="<?php echo base_url('/organizer/register'); ?>">Create event</a></li>
                         <li><a class="link" href="<?php echo base_url('/login'); ?>">User Login</a></li>
                         <li><a class="link" href="<?php echo base_url('/organizer/login'); ?>">Organizer Login</a></li>
+                        <li><a class="link" href="<?php echo base_url('/travel/login'); ?>">Travel Portal Login</a></li>
                         <li><a class="link" href="<?php echo base_url('/help'); ?>">Help</a></li>
 
                     </ul>
