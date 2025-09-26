@@ -20,7 +20,7 @@ class PagesController
         $country = trim($_GET['country'] ?? '');
         $city = trim($_GET['city'] ?? '');
         $onlyFeatured = (int)($_GET['featured'] ?? 0);
-        $sql = 'SELECT td.*, ta.company_name, ta.logo_path FROM travel_destinations td JOIN travel_agencies ta ON ta.id = td.agency_id WHERE td.is_published = 1 AND ta.is_approved = 1';
+        $sql = 'SELECT td.*, ta.company_name, ta.logo_path, ta.id as agency_id FROM travel_destinations td JOIN travel_agencies ta ON ta.id = td.agency_id WHERE td.is_published = 1 AND ta.is_approved = 1';
         $params = [];
         if ($q !== '') { $sql .= ' AND (td.title LIKE ? OR td.destination LIKE ? OR ta.company_name LIKE ?)'; $like = "%$q%"; array_push($params,$like,$like,$like); }
         if ($country !== '') { $sql .= ' AND ta.country = ?'; $params[] = $country; }
@@ -45,7 +45,7 @@ class PagesController
         if ($id <= 0) { http_response_code(404); echo 'Destination not found'; return; }
         
         $stmt = db()->prepare('
-            SELECT td.*, ta.company_name, ta.logo_path, ta.contact_person, ta.email, ta.phone, ta.website, ta.description as agency_description
+            SELECT td.*, ta.company_name, ta.logo_path, ta.contact_person, ta.email, ta.phone, ta.website, ta.description as agency_description, ta.id as agency_id
             FROM travel_destinations td 
             JOIN travel_agencies ta ON ta.id = td.agency_id 
             WHERE td.id = ? AND td.is_published = 1 AND ta.is_approved = 1 AND ta.is_active = 1

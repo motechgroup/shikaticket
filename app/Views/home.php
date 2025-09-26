@@ -118,7 +118,7 @@
             <p class="text-xs md:text-sm text-gray-400 mt-1 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
             <div class="flex items-center justify-between mt-2">
                 <p class="text-blue-400 font-semibold text-sm md:text-base"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></p>
-                <span class="text-xs text-gray-400">by <?php echo htmlspecialchars($destination['company_name']); ?></span>
+                <span class="text-xs text-gray-400">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($destination['company_name']); ?></a></span>
             </div>
         </a>
         <?php endforeach; ?>

@@ -183,7 +183,7 @@
           <img src="<?php echo base_url($destination['logo_path']); ?>" alt="<?php echo htmlspecialchars($destination['company_name']); ?>" class="w-12 h-12 rounded-lg object-cover">
           <?php endif; ?>
           <div>
-            <div class="font-semibold"><?php echo htmlspecialchars($destination['company_name']); ?></div>
+            <div class="font-semibold"><a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($destination['company_name']); ?></a></div>
             <div class="text-sm text-gray-400">Contact: <?php echo htmlspecialchars($destination['contact_person']); ?></div>
           </div>
         </div>

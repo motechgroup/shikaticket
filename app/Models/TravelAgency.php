@@ -65,7 +65,7 @@ class TravelAgency
     public static function getFeaturedDestinations(int $limit = 6): array
     {
         $sql = '
-            SELECT td.*, ta.company_name, ta.logo_path 
+            SELECT td.*, ta.company_name, ta.logo_path, ta.id as agency_id 
             FROM travel_destinations td 
             JOIN travel_agencies ta ON ta.id = td.agency_id 
             WHERE td.is_featured = 1 AND td.is_published = 1 
@@ -81,7 +81,7 @@ class TravelAgency
     public static function getAllPublishedDestinations(int $limit = 20, int $offset = 0): array
     {
         $sql = '
-            SELECT td.*, ta.company_name, ta.logo_path 
+            SELECT td.*, ta.company_name, ta.logo_path, ta.id as agency_id 
             FROM travel_destinations td 
             JOIN travel_agencies ta ON ta.id = td.agency_id 
             WHERE td.is_published = 1 

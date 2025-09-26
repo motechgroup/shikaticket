@@ -45,7 +45,7 @@
       <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
       <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
       <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-      <div class="text-gray-500 text-xs mt-1">by <?php echo htmlspecialchars($d['company_name']); ?></div>
+      <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
     </a>
     <?php endforeach; ?>
   </div>
@@ -59,7 +59,7 @@
       <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
       <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
       <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-      <div class="text-gray-500 text-xs mt-1">by <?php echo htmlspecialchars($d['company_name']); ?></div>
+      <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
     </a>
     <?php endforeach; ?>
   </div>
@@ -74,7 +74,7 @@
         <div class="font-semibold"><?php echo htmlspecialchars($d['title']); ?></div>
         <div class="text-gray-400 text-sm"><?php echo htmlspecialchars($d['destination']); ?></div>
         <div class="text-blue-400 mt-1 text-sm"><?php echo htmlspecialchars($d['currency']); ?> <?php echo number_format((float)$d['price'], 2); ?></div>
-        <div class="text-gray-500 text-xs mt-1">by <?php echo htmlspecialchars($d['company_name']); ?></div>
+        <div class="text-gray-500 text-xs mt-1">by <a href="<?php echo base_url('/travel/agency?id=' . $d['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($d['company_name']); ?></a></div>
       </a>
     <?php endforeach; endif; ?>
   </div>
