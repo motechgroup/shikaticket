@@ -103,56 +103,64 @@
 <!-- Travel Destinations Section -->
 <?php if (!empty($featuredDestinations)): ?>
 <section class="max-w-6xl mx-auto px-4 py-10">
-    <h2 class="text-xl md:text-2xl font-semibold text-center mb-6">Featured Destinations</h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 grid-flow-row auto-rows-max">
+    <h2 class="text-xl md:text-2xl font-semibold text-center mb-8">Featured Destinations</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr items-stretch">
         <?php foreach ($featuredDestinations as $destination): ?>
-        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="card card-hover p-3 md:p-4 block">
-            <?php if (!empty($destination['image_path'])): ?>
-                <div class="relative rounded mb-3 h-48 bg-black overflow-hidden">
-                    <span class="absolute top-2 left-2 z-10 text-[11px] md:text-xs bg-blue-600 text-white rounded px-2 py-1"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
-                    <span class="absolute top-2 right-2 z-10 text-[11px] md:text-xs bg-gray-800 text-white rounded px-2 py-1"><?php echo $destination['duration_days']; ?> days</span>
-                    <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="absolute inset-0 w-full h-full object-cover z-0">
+        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="group block h-full">
+            <div class="card card-hover overflow-hidden h-full flex flex-col">
+                <?php if (!empty($destination['image_path'])): ?>
+                    <div class="relative h-48 bg-gray-900 overflow-hidden">
+                        <span class="absolute top-3 left-3 z-10 text-xs bg-blue-600 text-white rounded-full px-3 py-1 font-medium"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
+                        <span class="absolute top-3 right-3 z-10 text-xs bg-gray-800 text-white rounded-full px-3 py-1 font-medium"><?php echo $destination['duration_days']; ?> days</span>
+                        <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                <?php endif; ?>
+                <div class="p-4 flex-1 flex flex-col">
+                    <h3 class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($destination['title']); ?></h3>
+                    <p class="text-sm text-gray-400 mb-3 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <div class="text-blue-400 font-bold text-lg"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></div>
+                        <div class="text-xs text-gray-500">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($destination['company_name']); ?></a></div>
+                    </div>
                 </div>
-            <?php endif; ?>
-            <h3 class="font-semibold text-base md:text-lg line-clamp-2"><?php echo htmlspecialchars($destination['title']); ?></h3>
-            <p class="text-xs md:text-sm text-gray-400 mt-1 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-blue-400 font-semibold text-sm md:text-base"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></p>
-                <span class="text-xs text-gray-400">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($destination['company_name']); ?></a></span>
             </div>
         </a>
         <?php endforeach; ?>
     </div>
-    <div class="text-center mt-6">
-        <a href="<?php echo base_url('/travel?featured=1'); ?>" class="btn btn-secondary">Browse more featured</a>
+    <div class="text-center mt-8">
+        <a href="<?php echo base_url('/travel?featured=1'); ?>" class="btn btn-primary px-8 py-3 text-lg">Browse more featured</a>
     </div>
 </section>
 <?php endif; ?>
 
 <?php if (!empty($availableDestinations)): ?>
 <section class="max-w-6xl mx-auto px-4 pb-16">
-    <h2 class="text-xl md:text-2xl font-semibold text-center mb-6">Available Destinations</h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 grid-flow-row auto-rows-max">
+    <h2 class="text-xl md:text-2xl font-semibold text-center mb-8">Available Destinations</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr items-stretch">
         <?php foreach ($availableDestinations as $destination): ?>
-        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="card card-hover p-3 md:p-4 block">
-            <?php if (!empty($destination['image_path'])): ?>
-                <div class="relative rounded mb-3 h-48 bg-black overflow-hidden">
-                    <span class="absolute top-2 left-2 z-10 text-[11px] md:text-xs bg-blue-600 text-white rounded px-2 py-1"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
-                    <span class="absolute top-2 right-2 z-10 text-[11px] md:text-xs bg-gray-800 text-white rounded px-2 py-1"><?php echo $destination['duration_days']; ?> days</span>
-                    <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="absolute inset-0 w-full h-full object-cover z-0">
+        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="group block h-full">
+            <div class="card card-hover overflow-hidden h-full flex flex-col">
+                <?php if (!empty($destination['image_path'])): ?>
+                    <div class="relative h-48 bg-gray-900 overflow-hidden">
+                        <span class="absolute top-3 left-3 z-10 text-xs bg-blue-600 text-white rounded-full px-3 py-1 font-medium"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
+                        <span class="absolute top-3 right-3 z-10 text-xs bg-gray-800 text-white rounded-full px-3 py-1 font-medium"><?php echo $destination['duration_days']; ?> days</span>
+                        <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                <?php endif; ?>
+                <div class="p-4 flex-1 flex flex-col">
+                    <h3 class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($destination['title']); ?></h3>
+                    <p class="text-sm text-gray-400 mb-3 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <div class="text-blue-400 font-bold text-lg"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></div>
+                        <div class="text-xs text-gray-500">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($destination['company_name']); ?></a></div>
+                    </div>
                 </div>
-            <?php endif; ?>
-            <h3 class="font-semibold text-base md:text-lg line-clamp-2"><?php echo htmlspecialchars($destination['title']); ?></h3>
-            <p class="text-xs md:text-sm text-gray-400 mt-1 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
-            <div class="flex items-center justify-between mt-2">
-                <p class="text-blue-400 font-semibold text-sm md:text-base"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></p>
-                <span class="text-xs text-gray-400">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300"><?php echo htmlspecialchars($destination['company_name']); ?></a></span>
             </div>
         </a>
         <?php endforeach; ?>
     </div>
-    <div class="text-center mt-6">
-        <a href="<?php echo base_url('/travel'); ?>" class="btn btn-secondary">Browse all destinations</a>
+    <div class="text-center mt-8">
+        <a href="<?php echo base_url('/travel'); ?>" class="btn btn-primary px-8 py-3 text-lg">Browse all destinations</a>
     </div>
 </section>
 <?php endif; ?>
