@@ -1,14 +1,14 @@
 <?php /** @var array $destinations */ ?>
-<?php $pageTitle = 'My Destinations'; ob_start(); ?>
-<div class="max-w-6xl mx-auto px-4 py-10">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-semibold">Destinations</h1>
-    <a class="btn btn-primary" href="<?php echo base_url('/travel/destinations/create'); ?>">Add Destination</a>
+<?php $pageTitle = 'My Destinations'; ?>
+<div class="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <h1 class="text-xl md:text-2xl font-semibold text-white">Destinations</h1>
+    <a class="btn btn-primary w-full sm:w-auto" href="<?php echo base_url('/travel/destinations/create'); ?>">Add Destination</a>
   </div>
 
   <div class="card p-4">
     <?php if (empty($destinations)): ?>
-      <div class="p-6 text-gray-400">No destinations yet.</div>
+      <div class="p-6 text-gray-300">No destinations yet.</div>
     <?php else: ?>
       <table class="min-w-full text-sm table">
         <thead>
@@ -28,7 +28,7 @@
               <?php if (!empty($d['image_path'])): ?>
                 <img src="<?php echo base_url($d['image_path']); ?>" class="h-10 w-10 object-cover rounded" alt="img">
               <?php else: ?>
-                <span class="text-gray-500 text-xs">No image</span>
+                <span class="text-gray-400 text-xs">No image</span>
               <?php endif; ?>
             </td>
             <td class="p-3 font-medium"><?php echo htmlspecialchars($d['title']); ?></td>
@@ -43,6 +43,5 @@
     <?php endif; ?>
   </div>
 </div>
-<?php $content = ob_get_clean(); include __DIR__ . '/../../layouts/travel.php'; ?>
 
 

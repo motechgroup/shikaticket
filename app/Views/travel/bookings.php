@@ -1,14 +1,14 @@
 <?php /** @var array $bookings */ ?>
-<?php $pageTitle = 'Bookings'; ob_start(); ?>
-<div class="max-w-6xl mx-auto px-4 py-10">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-semibold">Bookings</h1>
-    <a class="btn btn-secondary" href="<?php echo base_url('/travel/dashboard'); ?>">Back to Dashboard</a>
+<?php $pageTitle = 'Bookings'; ?>
+<div class="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <h1 class="text-xl md:text-2xl font-semibold text-white">Bookings</h1>
+    <a class="btn btn-secondary w-full sm:w-auto" href="<?php echo base_url('/travel/dashboard'); ?>">Back to Dashboard</a>
   </div>
 
   <div class="card p-4">
     <?php if (empty($bookings)): ?>
-      <div class="p-6 text-gray-400">No bookings yet.</div>
+      <div class="p-6 text-gray-300">No bookings yet.</div>
     <?php else: ?>
       <table class="min-w-full text-sm table">
         <thead>
@@ -41,6 +41,5 @@
     <?php endif; ?>
   </div>
 </div>
-<?php $content = ob_get_clean(); include __DIR__ . '/../layouts/travel.php'; ?>
 
 

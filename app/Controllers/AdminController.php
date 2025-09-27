@@ -661,6 +661,7 @@ class AdminController
             'payment_success' => Setting::get('sms.payment_success', 'Order #{{order_id}} confirmed. Tickets: {{tickets}}'),
             'organizer_otp' => Setting::get('sms.organizer_otp', 'Your Ticko OTP: {{otp}}'),
             'withdrawal_request' => Setting::get('sms.withdrawal_request', 'We received your withdrawal request of KES {{amount}}'),
+            'travel_booking_confirmed' => Setting::get('sms.travel_booking_confirmed', 'Travel booking confirmed! Destination: {{destination}}. Ticket Code: {{ticket_code}}. Booking Reference: {{booking_reference}}. View ticket: {{ticket_link}}. Contact: {{agency_name}} at {{agency_phone}}'),
         ];
         view('admin/sms_templates', compact('templates'));
     }
@@ -672,6 +673,44 @@ class AdminController
             Setting::set('sms.' . $k, $v);
         }
         flash_set('success', 'SMS templates saved.');
+        redirect(base_url('/admin/sms-templates'));
+    }
+
+    public function testSms(): void
+    {
+        require_admin();
+        
+        $phoneNumber = $_POST['phone_number'] ?? '';
+        $message = $_POST['message'] ?? 'Test SMS from Ticko Admin Panel';
+        
+        if (empty($phoneNumber)) {
+            flash_set('error', 'Phone number is required.');
+            redirect(base_url('/admin/sms-templates'));
+            return;
+        }
+        
+        try {
+            $sms = new \App\Services\Sms();
+            
+            if (!$sms->isConfigured()) {
+                flash_set('error', 'SMS service is not configured. Please check your SMS settings.');
+                redirect(base_url('/admin/sms-templates'));
+                return;
+            }
+            
+            $result = $sms->send($phoneNumber, $message);
+            
+            if ($result) {
+                flash_set('success', 'Test SMS sent successfully to ' . $phoneNumber);
+            } else {
+                flash_set('error', 'Failed to send test SMS. Check SMS logs for details.');
+            }
+            
+        } catch (\Throwable $e) {
+            error_log("Admin SMS test error: " . $e->getMessage());
+            flash_set('error', 'Error sending test SMS: ' . $e->getMessage());
+        }
+        
         redirect(base_url('/admin/sms-templates'));
     }
 
@@ -1063,6 +1102,109 @@ class AdminController
             } catch (\PDOException $e) {}
         }
         redirect(base_url('/admin/travel-banners'));
+    }
+
+    public function hotelsIndex(): void
+    {
+        require_admin();
+        
+        $q = trim($_GET['q'] ?? '');
+        $status = trim($_GET['status'] ?? '');
+        
+        $sql = 'SELECT * FROM hotel_applications WHERE 1=1';
+        $params = [];
+        
+        if ($q !== '') {
+            $sql .= ' AND (hotel_name LIKE ? OR contact_person LIKE ? OR email LIKE ? OR location LIKE ?)';
+            $like = "%$q%";
+            $params = array_merge($params, [$like, $like, $like, $like]);
+        }
+        
+        if ($status !== '') {
+            $sql .= ' AND status = ?';
+            $params[] = $status;
+        }
+        
+        $sql .= ' ORDER BY created_at DESC';
+        
+        try {
+            $stmt = db()->prepare($sql);
+            $stmt->execute($params);
+            $hotels = $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            $hotels = [];
+        }
+        
+        // Get statistics
+        $stats = [];
+        try {
+            $stmt = db()->query('SELECT status, COUNT(*) as count FROM hotel_applications GROUP BY status');
+            $statusCounts = $stmt->fetchAll();
+            foreach ($statusCounts as $row) {
+                $stats[$row['status']] = (int)$row['count'];
+            }
+        } catch (\PDOException $e) {
+            $stats = [];
+        }
+        
+        view('admin/hotels/index', compact('hotels', 'q', 'status', 'stats'));
+    }
+
+    public function hotelShow(): void
+    {
+        require_admin();
+        
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            redirect('/admin/hotels');
+            return;
+        }
+        
+        try {
+            $stmt = db()->prepare('SELECT * FROM hotel_applications WHERE id = ?');
+            $stmt->execute([$id]);
+            $hotel = $stmt->fetch();
+            
+            if (!$hotel) {
+                redirect('/admin/hotels');
+                return;
+            }
+            
+            view('admin/hotels/show', compact('hotel'));
+        } catch (\PDOException $e) {
+            redirect('/admin/hotels');
+        }
+    }
+
+    public function updateHotelStatus(): void
+    {
+        require_admin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('/admin/hotels');
+            return;
+        }
+        
+        $id = (int)($_POST['id'] ?? 0);
+        $status = trim($_POST['status'] ?? '');
+        $adminNotes = trim($_POST['admin_notes'] ?? '');
+        
+        if ($id <= 0 || !in_array($status, ['pending', 'approved', 'rejected', 'contacted'])) {
+            flash_set('error', 'Invalid request.');
+            redirect('/admin/hotels');
+            return;
+        }
+        
+        try {
+            $stmt = db()->prepare('UPDATE hotel_applications SET status = ?, admin_notes = ?, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([$status, $adminNotes, $id]);
+            
+            flash_set('success', 'Hotel application status updated successfully.');
+        } catch (\PDOException $e) {
+            flash_set('error', 'Failed to update hotel application status.');
+        }
+        
+        redirect('/admin/hotels/show?id=' . $id);
     }
 }
 

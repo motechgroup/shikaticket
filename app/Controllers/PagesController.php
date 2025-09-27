@@ -151,6 +151,208 @@ class PagesController
         } catch (\PDOException $e) { flash_set('error','Could not save rating.'); }
         redirect('/travel/agency?id=' . $agencyId);
     }
+
+    public function hotelsComingSoon(): void
+    {
+        // Get platform statistics for credibility
+        $stats = $this->getPlatformStats();
+        
+        // Get site settings for branding
+        $siteTitle = \App\Models\Setting::get('site.title') ?? 'Ticko';
+        $siteLogo = \App\Models\Setting::get('site.logo') ?? '/uploads/site/logo.png';
+        
+        standalone_view('hotels/coming_soon', compact('stats', 'siteTitle', 'siteLogo'));
+    }
+
+    public function hotelApplication(): void
+    {
+        // Check if this is an AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        
+        // For AJAX requests, start output buffering to prevent any unwanted output
+        if ($isAjax) {
+            ob_start();
+            // Debug: Log what we're about to send
+            error_log('AJAX Hotel Application - Starting request processing');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($isAjax) {
+                ob_clean(); // Clear any output buffer
+                header('Content-Type: application/json');
+                http_response_code(405);
+                echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+                exit;
+            }
+            redirect('/hotels');
+            return;
+        }
+
+        // Validate CSRF token
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+            if ($isAjax) {
+                ob_clean(); // Clear any output buffer
+                header('Content-Type: application/json');
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Invalid request. Please refresh the page and try again.']);
+                exit;
+            }
+            flash_set('error', 'Invalid request. Please try again.');
+            redirect('/hotels');
+            return;
+        }
+
+        // Get form data
+        $hotelName = trim($_POST['hotel_name'] ?? '');
+        $contactPerson = trim($_POST['contact_person'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        $rooms = (int)($_POST['rooms'] ?? 0);
+        $website = trim($_POST['website'] ?? '');
+        $experience = trim($_POST['experience'] ?? '');
+        $whyInterested = trim($_POST['why_interested'] ?? '');
+
+        // Validate required fields
+        $errors = [];
+        if (empty($hotelName)) $errors[] = 'Hotel name is required';
+        if (empty($contactPerson)) $errors[] = 'Contact person is required';
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required';
+        if (empty($phone)) $errors[] = 'Phone number is required';
+        if (empty($location)) $errors[] = 'Location is required';
+        if ($rooms <= 0) $errors[] = 'Number of rooms must be greater than 0';
+
+        if (!empty($errors)) {
+            if ($isAjax) {
+                ob_clean(); // Clear any output buffer
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => implode('. ', $errors)]);
+                exit;
+            }
+            flash_set('error', implode('. ', $errors));
+            redirect('/hotels');
+            return;
+        }
+
+        // Save application to database
+        try {
+            $stmt = db()->prepare('
+                INSERT INTO hotel_applications 
+                (hotel_name, contact_person, email, phone, location, rooms, website, experience, why_interested, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ');
+            $stmt->execute([
+                $hotelName, $contactPerson, $email, $phone, $location, $rooms, $website, $experience, $whyInterested, 'pending'
+            ]);
+
+            // Send notification email to admin
+            $this->sendHotelApplicationNotification([
+                'hotel_name' => $hotelName,
+                'contact_person' => $contactPerson,
+                'email' => $email,
+                'phone' => $phone,
+                'location' => $location,
+                'rooms' => $rooms,
+                'website' => $website,
+                'experience' => $experience,
+                'why_interested' => $whyInterested
+            ]);
+
+            if ($isAjax) {
+                ob_clean(); // Clear any output buffer
+                header('Content-Type: application/json');
+                $response = json_encode(['success' => true, 'message' => 'Application submitted successfully!']);
+                error_log('AJAX Response: ' . $response);
+                echo $response;
+                exit;
+            }
+            
+            flash_set('success', 'Thank you for your application! We will review it and get back to you within 2-3 business days.');
+        } catch (\PDOException $e) {
+            error_log('Hotel application error: ' . $e->getMessage());
+            
+            if ($isAjax) {
+                ob_clean(); // Clear any output buffer
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'There was an error submitting your application. Please try again.']);
+                exit;
+            }
+            
+            flash_set('error', 'There was an error submitting your application. Please try again.');
+        }
+
+        redirect('/hotels');
+    }
+
+    private function getPlatformStats(): array
+    {
+        $stats = [];
+        
+        try {
+            // Total events
+            $stmt = db()->query('SELECT COUNT(*) as count FROM events WHERE is_published = 1');
+            $stats['total_events'] = (int)($stmt->fetch()['count'] ?? 0);
+            
+            // Total users
+            $stmt = db()->query('SELECT COUNT(*) as count FROM users WHERE is_active = 1');
+            $stats['total_users'] = (int)($stmt->fetch()['count'] ?? 0);
+            
+            // Total organizers
+            $stmt = db()->query('SELECT COUNT(*) as count FROM organizers WHERE is_active = 1 AND is_approved = 1');
+            $stats['total_organizers'] = (int)($stmt->fetch()['count'] ?? 0);
+            
+            // Total travel bookings
+            $stmt = db()->query('SELECT COUNT(*) as count FROM travel_bookings WHERE status = "confirmed"');
+            $stats['total_bookings'] = (int)($stmt->fetch()['count'] ?? 0);
+            
+            // Total revenue (estimated)
+            $stmt = db()->query('SELECT SUM(total_amount) as total FROM travel_bookings WHERE status = "confirmed"');
+            $revenue = (float)($stmt->fetch()['total'] ?? 0);
+            $stats['total_revenue'] = $revenue;
+            
+        } catch (\PDOException $e) {
+            // Default stats if database query fails
+            $stats = [
+                'total_events' => 150,
+                'total_users' => 2500,
+                'total_organizers' => 85,
+                'total_bookings' => 320,
+                'total_revenue' => 1250000
+            ];
+        }
+        
+        return $stats;
+    }
+
+    private function sendHotelApplicationNotification(array $data): void
+    {
+        try {
+            $adminEmail = \App\Models\Setting::get('admin.email') ?? 'admin@ticko.com';
+            $siteTitle = \App\Models\Setting::get('site.title') ?? 'Ticko';
+            
+            $subject = "New Hotel Application - {$data['hotel_name']}";
+            $message = "
+                <h2>New Hotel Application Received</h2>
+                <p><strong>Hotel Name:</strong> {$data['hotel_name']}</p>
+                <p><strong>Contact Person:</strong> {$data['contact_person']}</p>
+                <p><strong>Email:</strong> {$data['email']}</p>
+                <p><strong>Phone:</strong> {$data['phone']}</p>
+                <p><strong>Location:</strong> {$data['location']}</p>
+                <p><strong>Number of Rooms:</strong> {$data['rooms']}</p>
+                <p><strong>Website:</strong> {$data['website']}</p>
+                <p><strong>Experience:</strong> {$data['experience']}</p>
+                <p><strong>Why Interested:</strong> {$data['why_interested']}</p>
+                <p><strong>Submitted:</strong> " . date('Y-m-d H:i:s') . "</p>
+            ";
+            
+            $mailer = new \App\Services\Mailer();
+            $mailer->send($adminEmail, $subject, $message);
+        } catch (\Exception $e) {
+            error_log('Hotel application notification error: ' . $e->getMessage());
+        }
+    }
 }
 
 

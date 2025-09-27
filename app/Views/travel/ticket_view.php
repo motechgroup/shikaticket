@@ -21,7 +21,7 @@
 
         <!-- QR Code -->
         <div class="flex justify-center mb-6">
-            <div class="bg-white p-4 rounded-lg">
+            <div class="bg-dark-card p-4 rounded-lg">
                 <img src="<?php echo htmlspecialchars($qrUrl); ?>" 
                      alt="QR Code for <?php echo htmlspecialchars($ticket['ticket_code']); ?>" 
                      class="w-64 h-64">

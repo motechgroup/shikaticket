@@ -32,7 +32,7 @@
         <form method="post" action="<?php echo base_url('/travel/agency/rate'); ?>" class="flex items-center gap-2">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="agency_id" value="<?php echo (int)$agency['id']; ?>">
-            <select name="rating" class="select w-28">
+            <select name="rating" class="w-28 px-3 py-2 border border-gray-600 bg-dark-card text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
                 <option value="">Rate ★</option>
                 <?php for ($i=5;$i>=1;$i--): ?>
                     <option value="<?php echo $i; ?>"><?php echo $i; ?> ★</option>

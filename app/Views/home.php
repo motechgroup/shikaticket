@@ -104,27 +104,44 @@
 <?php if (!empty($featuredDestinations)): ?>
 <section class="max-w-6xl mx-auto px-4 py-10">
     <h2 class="text-xl md:text-2xl font-semibold text-center mb-8">Featured Destinations</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr items-stretch">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <?php foreach ($featuredDestinations as $destination): ?>
-        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="group block h-full">
-            <div class="card card-hover overflow-hidden h-full flex flex-col">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+            <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="block">
                 <?php if (!empty($destination['image_path'])): ?>
-                    <div class="relative h-48 bg-gray-900 overflow-hidden">
-                        <span class="absolute top-3 left-3 z-10 text-xs bg-blue-600 text-white rounded-full px-3 py-1 font-medium"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
-                        <span class="absolute top-3 right-3 z-10 text-xs bg-gray-800 text-white rounded-full px-3 py-1 font-medium"><?php echo $destination['duration_days']; ?> days</span>
-                        <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <div class="relative h-56 overflow-hidden">
+                    <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    <div class="absolute top-3 left-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        <?php echo htmlspecialchars($destination['departure_date']); ?>
                     </div>
-                <?php endif; ?>
-                <div class="p-4 flex-1 flex flex-col">
-                    <h3 class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($destination['title']); ?></h3>
-                    <p class="text-sm text-gray-400 mb-3 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
-                    <div class="mt-auto flex items-center justify-between">
-                        <div class="text-blue-400 font-bold text-lg"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></div>
-                        <div class="text-xs text-gray-500">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($destination['company_name']); ?></a></div>
+                    <div class="absolute top-3 right-3 bg-gray-800 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        <?php echo $destination['duration_days']; ?> days
                     </div>
                 </div>
-            </div>
-        </a>
+                <?php endif; ?>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 line-clamp-2"><?php echo htmlspecialchars($destination['title']); ?></h3>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-1">
+                        <span class="inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <?php echo htmlspecialchars($destination['destination']); ?>
+                        </span>
+                        <span class="text-gray-400 mx-2">•</span>
+                        <span class="text-gray-500"><?php echo htmlspecialchars($destination['departure_location']); ?></span>
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <div class="text-2xl font-bold text-blue-600">
+                            <?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-600 hover:text-blue-800 font-medium"><?php echo htmlspecialchars($destination['company_name']); ?></a>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
         <?php endforeach; ?>
     </div>
     <div class="text-center mt-8">
@@ -136,27 +153,44 @@
 <?php if (!empty($availableDestinations)): ?>
 <section class="max-w-6xl mx-auto px-4 pb-16">
     <h2 class="text-xl md:text-2xl font-semibold text-center mb-8">Available Destinations</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr items-stretch">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <?php foreach ($availableDestinations as $destination): ?>
-        <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="group block h-full">
-            <div class="card card-hover overflow-hidden h-full flex flex-col">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+            <a href="<?php echo base_url('/travel/destination?id=' . $destination['id']); ?>" class="block">
                 <?php if (!empty($destination['image_path'])): ?>
-                    <div class="relative h-48 bg-gray-900 overflow-hidden">
-                        <span class="absolute top-3 left-3 z-10 text-xs bg-blue-600 text-white rounded-full px-3 py-1 font-medium"><?php echo htmlspecialchars($destination['departure_date']); ?></span>
-                        <span class="absolute top-3 right-3 z-10 text-xs bg-gray-800 text-white rounded-full px-3 py-1 font-medium"><?php echo $destination['duration_days']; ?> days</span>
-                        <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <div class="relative h-56 overflow-hidden">
+                    <img src="<?php echo base_url($destination['image_path']); ?>" alt="Destination" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    <div class="absolute top-3 left-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        <?php echo htmlspecialchars($destination['departure_date']); ?>
                     </div>
-                <?php endif; ?>
-                <div class="p-4 flex-1 flex flex-col">
-                    <h3 class="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"><?php echo htmlspecialchars($destination['title']); ?></h3>
-                    <p class="text-sm text-gray-400 mb-3 line-clamp-1"><?php echo htmlspecialchars($destination['destination']); ?> • <?php echo htmlspecialchars($destination['departure_location']); ?></p>
-                    <div class="mt-auto flex items-center justify-between">
-                        <div class="text-blue-400 font-bold text-lg"><?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?></div>
-                        <div class="text-xs text-gray-500">by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-400 hover:text-blue-300 transition-colors"><?php echo htmlspecialchars($destination['company_name']); ?></a></div>
+                    <div class="absolute top-3 right-3 bg-gray-800 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        <?php echo $destination['duration_days']; ?> days
                     </div>
                 </div>
-            </div>
-        </a>
+                <?php endif; ?>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 line-clamp-2"><?php echo htmlspecialchars($destination['title']); ?></h3>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-1">
+                        <span class="inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <?php echo htmlspecialchars($destination['destination']); ?>
+                        </span>
+                        <span class="text-gray-400 mx-2">•</span>
+                        <span class="text-gray-500"><?php echo htmlspecialchars($destination['departure_location']); ?></span>
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <div class="text-2xl font-bold text-blue-600">
+                            <?php echo htmlspecialchars($destination['currency']); ?> <?php echo number_format((float)$destination['price'], 2); ?>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            by <a href="<?php echo base_url('/travel/agency?id=' . $destination['agency_id']); ?>" class="text-blue-600 hover:text-blue-800 font-medium"><?php echo htmlspecialchars($destination['company_name']); ?></a>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
         <?php endforeach; ?>
     </div>
     <div class="text-center mt-8">

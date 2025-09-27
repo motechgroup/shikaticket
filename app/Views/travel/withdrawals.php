@@ -36,7 +36,7 @@
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm mb-1">Destination (Optional)</label>
-                    <select name="destination_id" class="select">
+                    <select name="destination_id" class="w-full px-3 py-2 border border-gray-600 bg-dark-card text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
                         <option value="">All Destinations (Overall)</option>
                         <?php foreach ($destinations as $dest): ?>
                             <?php if ($balances[$dest['id']] > 0): ?>
@@ -52,7 +52,7 @@
                 <div>
                     <label class="block text-sm mb-1">Amount (KES)</label>
                     <input type="number" name="amount" step="0.01" min="0" max="<?php echo $overallAvailable; ?>" 
-                           class="input" placeholder="Enter amount to withdraw" required>
+                           class="w-full px-3 py-2 border border-gray-600 bg-dark-card text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500" placeholder="Enter amount to withdraw" required>
                     <div class="text-xs text-gray-400 mt-1">
                         Max: KES <?php echo number_format($overallAvailable, 2); ?>
                     </div>

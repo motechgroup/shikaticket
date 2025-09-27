@@ -118,10 +118,11 @@ class PaymentController
         $desc = $resp['ResponseDescription'] ?? ($resp['errorMessage'] ?? 'Request sent');
         if ((string)$rc === '0') {
             flash_set('success', 'M-Pesa: ' . $desc);
+            redirect(base_url('/user/orders?order_id=' . $orderId . '&mpesa_payment=1'));
         } else {
             flash_set('error', 'M-Pesa Error: ' . $desc);
+            redirect(base_url('/user/orders?order_id=' . $orderId));
         }
-        redirect(base_url('/user/orders?order_id=' . $orderId));
 	}
 
     public function mpesaReconcile(): void
@@ -263,6 +264,8 @@ class PaymentController
         try {
             $sms = new \App\Services\Sms();
             if ($sms->isConfigured() && !empty($user['phone'])) {
+                error_log("Attempting to send SMS for order {$orderId} to user phone: {$user['phone']}");
+                
                 $codesFlat = [];
                 foreach ($items as $it2) {
                     $itTickets = db()->prepare('SELECT code FROM tickets t JOIN order_items oi ON oi.id=t.order_item_id WHERE oi.id = ? ORDER BY t.id ASC');
@@ -276,9 +279,16 @@ class PaymentController
                     'tickets' => $codesText . ' | Link: ' . $ticketLink,
                 ]);
                 if ($body === '') { $body = 'Order #' . $orderId . ' confirmed. Tickets: ' . $codesText . ' ' . $ticketLink; }
-                $sms->send($user['phone'], $body);
+                
+                error_log("SMS message for order {$orderId}: {$body}");
+                $result = $sms->send($user['phone'], $body);
+                error_log("SMS send result for order {$orderId}: " . ($result ? 'SUCCESS' : 'FAILED'));
+            } else {
+                error_log("SMS not sent for order {$orderId} - Service configured: " . ($sms->isConfigured() ? 'YES' : 'NO') . ", User phone: " . ($user['phone'] ?? 'EMPTY'));
             }
-        } catch (\Throwable $e) { /* ignore sms errors */ }
+        } catch (\Throwable $e) { 
+            error_log("SMS sending error for order {$orderId}: " . $e->getMessage());
+        }
     }
 
 	public function paypal(): void
@@ -590,15 +600,30 @@ class PaymentController
 		}
 		
 		// Check for travel payment first - look by checkout ID or account reference
+		error_log("M-Pesa callback: Looking for travel payment with checkout ID: " . $checkoutId);
+		error_log("M-Pesa callback: Raw callback data: " . $raw);
+		error_log("M-Pesa callback: Parsed data: " . json_encode($data));
+		
 		$stmt = db()->prepare("SELECT * FROM travel_payments WHERE payment_method = 'mpesa' AND (transaction_reference = ? OR transaction_reference LIKE ?) ORDER BY id DESC LIMIT 1");
 		$stmt->execute([$checkoutId, '%' . $checkoutId . '%']);
 		$travelPayment = $stmt->fetch();
 		
+		if ($travelPayment) {
+			error_log("M-Pesa callback: Found travel payment ID " . $travelPayment['id'] . " for booking ID " . $travelPayment['booking_id']);
+		} else {
+			error_log("M-Pesa callback: No travel payment found with checkout ID: " . $checkoutId);
+		}
+		
 		// If not found by transaction_reference, try to find by account reference pattern
 		if (!$travelPayment && !empty($stk['MerchantRequestID'])) {
+			error_log("M-Pesa callback: Trying to find by MerchantRequestID: " . $stk['MerchantRequestID']);
 			$stmt = db()->prepare("SELECT * FROM travel_payments WHERE payment_method = 'mpesa' AND transaction_reference LIKE ? ORDER BY id DESC LIMIT 1");
 			$stmt->execute(['%' . $stk['MerchantRequestID'] . '%']);
 			$travelPayment = $stmt->fetch();
+			
+			if ($travelPayment) {
+				error_log("M-Pesa callback: Found travel payment by MerchantRequestID: " . $travelPayment['id']);
+			}
 		}
 		
 		if ($travelPayment) {
@@ -726,22 +751,28 @@ class PaymentController
             db()->prepare('UPDATE travel_bookings SET status = ? WHERE id = ?')
                 ->execute(['confirmed', $travelPayment['booking_id']]);
             
-            // Send confirmation email
+            // Send confirmation email and SMS
             $this->sendTravelBookingConfirmation($travelPayment['booking_id']);
+            
+            error_log("Travel payment callback: Successfully processed booking ID " . $travelPayment['booking_id']);
         } else {
             // Payment failed
             db()->prepare('UPDATE travel_payments SET payment_status = ? WHERE id = ?')
                 ->execute(['failed', $travelPayment['id']]);
+            
+            error_log("Travel payment callback: Payment failed for booking ID " . $travelPayment['booking_id'] . " with result code " . $resultCode);
         }
     }
     
     private function sendTravelBookingConfirmation(int $bookingId): void
     {
         try {
+            error_log("Travel booking confirmation: Starting for booking ID {$bookingId}");
+            
             $stmt = db()->prepare('
                 SELECT tb.*, td.title as destination_title, td.departure_date, td.departure_location,
                        ta.company_name, ta.contact_person, ta.email as agency_email, ta.phone as agency_phone,
-                       u.name, u.email as user_email, u.phone as user_phone
+                       u.first_name, u.last_name, u.email as user_email, u.phone as user_phone
                 FROM travel_bookings tb
                 JOIN travel_destinations td ON td.id = tb.destination_id
                 JOIN travel_agencies ta ON ta.id = td.agency_id
@@ -751,7 +782,12 @@ class PaymentController
             $stmt->execute([$bookingId]);
             $booking = $stmt->fetch();
             
-            if (!$booking) return;
+            if (!$booking) {
+                error_log("Travel booking confirmation: Booking not found for ID {$bookingId}");
+                return;
+            }
+            
+            error_log("Travel booking confirmation: Found booking for user phone: {$booking['user_phone']}");
             
             // Generate travel ticket code
             $ticketCode = substr(str_shuffle('0123456789'), 0, 6);
@@ -769,7 +805,7 @@ class PaymentController
             
             $html = "
                 <h2>Travel Booking Confirmation</h2>
-                <p>Dear " . htmlspecialchars($booking['name']) . ",</p>
+                <p>Dear " . htmlspecialchars($booking['first_name'] . ' ' . $booking['last_name']) . ",</p>
                 <p>Your travel booking has been confirmed successfully!</p>
                 
                 <h3>Booking Details</h3>
@@ -799,7 +835,9 @@ class PaymentController
             // Send SMS notification
             try {
                 $sms = new \App\Services\Sms();
-                if ($sms->isConfigured()) {
+                error_log("Travel booking SMS: Service configured: " . ($sms->isConfigured() ? 'YES' : 'NO'));
+                
+                if ($sms->isConfigured() && !empty($booking['user_phone'])) {
                     // Generate public ticket link (no login required)
                     $ticketLink = base_url('/travel-tickets/view?code=' . $ticketCode);
                     
@@ -821,11 +859,15 @@ class PaymentController
                                   ". Contact: " . $booking['company_name'] . " at " . $booking['agency_phone'];
                     }
                     
-                    $sms->send($booking['user_phone'], $message);
+                    error_log("Travel booking SMS: Sending to {$booking['user_phone']}: {$message}");
+                    $result = $sms->send($booking['user_phone'], $message);
+                    error_log("Travel booking SMS: Send result: " . ($result ? 'SUCCESS' : 'FAILED'));
+                } else {
+                    error_log("Travel booking SMS: Not sent - Service configured: " . ($sms->isConfigured() ? 'YES' : 'NO') . ", User phone: " . ($booking['user_phone'] ?? 'EMPTY'));
                 }
             } catch (\Throwable $e) {
                 // SMS sending failed, but email was sent
-                error_log("SMS sending failed for travel booking: " . $e->getMessage());
+                error_log("Travel booking SMS error: " . $e->getMessage());
             }
             
         } catch (\Throwable $e) {

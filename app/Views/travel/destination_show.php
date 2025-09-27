@@ -155,8 +155,8 @@
           <input type="hidden" name="destination_id" value="<?php echo $destination['id']; ?>">
           
           <div>
-            <label class="block text-sm font-medium mb-2">Number of Participants</label>
-            <input type="number" name="participants_count" min="<?php echo (int)$destination['min_participants']; ?>" max="<?php echo (int)$destination['max_participants']; ?>" value="<?php echo (int)$destination['min_participants']; ?>" required class="input">
+            <label class="block text-sm font-medium text-white mb-2">Number of Participants</label>
+            <input type="number" name="participants_count" min="<?php echo (int)$destination['min_participants']; ?>" max="<?php echo (int)$destination['max_participants']; ?>" value="<?php echo (int)$destination['min_participants']; ?>" required class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500" style="color: white !important; background-color: #1f2937 !important;">
             <div class="text-xs text-gray-400 mt-1">
               Min: <?php echo (int)$destination['min_participants']; ?> | Max: <?php echo (int)$destination['max_participants']; ?>
             </div>

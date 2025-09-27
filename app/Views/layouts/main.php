@@ -102,43 +102,489 @@
 		.link{ color:#e5e7eb; }
 		.link:hover{ color:var(--accent); }
 		.badge{ display:inline-block; background:#1f2937; color:#e5e7eb; border:1px solid #374151; border-radius:.375rem; padding:.125rem .5rem; font-size:.75rem; }
+		
+		/* Modern Sidebar Styles */
+		.sidebar-nav-item {
+			transition: all 0.2s ease;
+		}
+		.sidebar-nav-item:hover {
+			background-color: rgba(55, 65, 81, 0.5);
+			transform: translateX(2px);
+		}
+		.sidebar-nav-item svg {
+			transition: all 0.2s ease;
+		}
+		.sidebar-section-title {
+			color: #6b7280;
+			font-size: 0.75rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
 		.table th{ color:#e5e7eb; background:#0f0f10; }
 		.table td, .table th{ border-top:1px solid #1f2937; }
 		.alert-success{ border:1px solid #14532d; background:#052e16; color:#86efac; border-radius:.5rem; }
 		.alert-error{ border:1px solid #7f1d1d; background:#450a0a; color:#fecaca; border-radius:.5rem; }
 		.main-with-sidebar{ margin-left:0; }
 		@media (min-width: 768px){ .main-with-sidebar{ margin-left:18rem; } }
+		
+		/* Mobile-First Responsive Design */
+		@media (max-width: 767px) {
+			.main-with-sidebar { margin-left: 0; }
+			.mobile-sidebar-overlay {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background: rgba(0, 0, 0, 0.5);
+				z-index: 39;
+				display: none;
+			}
+			.mobile-sidebar-overlay.active {
+				display: block;
+			}
+			.sidebar-mobile {
+				position: fixed;
+				top: 0;
+				left: -100%;
+				width: 280px;
+				height: 100vh;
+				background: #0d0d0d;
+				border-right: 1px solid #374151;
+				z-index: 40;
+				transition: left 0.3s ease;
+			}
+			.sidebar-mobile.active {
+				left: 0;
+			}
+			/* Mobile-friendly tables */
+			.table-responsive {
+				overflow-x: auto;
+				-webkit-overflow-scrolling: touch;
+			}
+			.table-responsive table {
+				min-width: 600px;
+			}
+			/* Mobile cards */
+			.mobile-card {
+				padding: 1rem;
+				margin-bottom: 1rem;
+			}
+			/* Touch-friendly buttons */
+			.touch-target {
+				min-height: 44px;
+				min-width: 44px;
+				cursor: pointer;
+				-webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+				touch-action: manipulation;
+			}
+			#adminMobileToggle {
+				cursor: pointer !important;
+				pointer-events: auto !important;
+				z-index: 50 !important;
+				position: relative;
+			}
+		}
 	</style>
 </head>
 <body class="min-h-screen flex flex-col">
 <?php $isAdminSidebar = (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin') !== false) && (($_SESSION['role'] ?? null) === 'admin'); ?>
 <?php $isOrganizerSidebar = (strpos($_SERVER['REQUEST_URI'] ?? '', '/organizer') !== false) && isset($_SESSION['organizer_id']); ?>
 <?php if ($isAdminSidebar): ?>
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobileSidebarOverlay" class="mobile-sidebar-overlay"></div>
+    
+    <!-- Mobile Sidebar -->
+    <aside id="mobileSidebar" class="sidebar-mobile md:hidden">
+        <div class="h-full flex flex-col">
+            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-800">
+                <div class="flex items-center gap-3">
+                    <img src="<?php echo base_url($siteLogo); ?>" class="h-9 w-auto" alt="logo">
+                    <span class="font-semibold">Admin</span>
+                </div>
+                <button id="mobileSidebarClose" class="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-800 touch-target" aria-label="Close menu">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6 text-sm">
+                <!-- Dashboard -->
+                <div class="space-y-1">
+                    <a href="<?php echo base_url('/admin'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
+                        </svg>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Users & Organizers -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Users & Partners</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/users'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <span>Users</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/organizers'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Organizers</span>
+                    </a>
+                </div>
+
+                <!-- Events & Content -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Events & Content</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/events'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Events</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/banners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Banners</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/pages'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Pages</span>
+                    </a>
+                </div>
+
+                <!-- Partners & Branding -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Partners & Branding</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/partners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>Partners</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/partner-logos'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Partner Logos</span>
+                    </a>
+                </div>
+                <!-- Travel Management -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Travel</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Travel Agencies</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Destinations</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/travel-banners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Travel Banners</span>
+                    </a>
+                </div>
+
+                <!-- Hotels -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Hotels</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/hotels'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Hotel Applications</span>
+                    </a>
+                </div>
+
+                <!-- Communications -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Communications</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/email-templates'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Email Templates</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <span>SMS Templates</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/communications'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                        </svg>
+                        <span>Communications</span>
+                    </a>
+                </div>
+
+                <!-- Operations -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Operations</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/scans'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                        </svg>
+                        <span>Scans</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>Withdrawals</span>
+                    </a>
+                </div>
+
+                <!-- Settings & Profile -->
+                <div class="space-y-1 pt-4 border-t border-gray-800">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Account</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/settings'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/profile'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        <span>My Profile</span>
+                    </a>
+                    <a href="<?php echo base_url('/logout'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group text-red-400 hover:text-red-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </aside>
+    
+    <!-- Desktop Sidebar -->
     <aside class="fixed inset-y-0 left-0 w-72 hidden md:block z-40 header/side bg-[#0d0d0d] border-r border-gray-800">
         <div class="h-full flex flex-col">
             <div class="px-4 py-3 flex items-center gap-3 border-b border-gray-800">
                 <img src="<?php echo base_url($siteLogo); ?>" class="h-9 w-auto" alt="logo">
                 <span class="font-semibold">Admin</span>
             </div>
-            <nav class="flex-1 overflow-y-auto px-2 py-4 space-y-1 text-sm">
-                <a href="<?php echo base_url('/admin'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Dashboard</a>
-                <a href="<?php echo base_url('/admin/users'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Users</a>
-                <a href="<?php echo base_url('/admin/organizers'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Organizers</a>
-                <a href="<?php echo base_url('/admin/events'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Events</a>
-                <a href="<?php echo base_url('/admin/banners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Banners</a>
-                <a href="<?php echo base_url('/admin/partners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Partners</a>
-                <a href="<?php echo base_url('/admin/partner-logos'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Partner Logos</a>
-                <a href="<?php echo base_url('/admin/pages'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Pages</a>
-                <a href="<?php echo base_url('/admin/settings'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Settings</a>
-                <a href="<?php echo base_url('/admin/email-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Email Templates</a>
-                <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">SMS Templates</a>
-                <a href="<?php echo base_url('/admin/scans'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Scans</a>
-                <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Withdrawals</a>
-                <a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Agencies</a>
-                <a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Destinations</a>
-                <a href="<?php echo base_url('/admin/travel-banners'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Travel Banners</a>
-                <a href="<?php echo base_url('/admin/profile'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">My Profile</a>
-                <a href="<?php echo base_url('/logout'); ?>" class="block px-3 py-2 rounded hover:bg-gray-800">Logout</a>
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6 text-sm">
+                <!-- Dashboard -->
+                <div class="space-y-1">
+                    <a href="<?php echo base_url('/admin'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
+                        </svg>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Users & Organizers -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Users & Partners</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/users'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <span>Users</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/organizers'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Organizers</span>
+                    </a>
+                </div>
+
+                <!-- Events & Content -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Events & Content</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/events'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Events</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/banners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Banners</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/pages'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span>Pages</span>
+                    </a>
+                </div>
+
+                <!-- Partners & Branding -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Partners & Branding</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/partners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>Partners</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/partner-logos'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Partner Logos</span>
+                    </a>
+                </div>
+
+                <!-- Travel Management -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Travel</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Travel Agencies</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Destinations</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/travel-banners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Travel Banners</span>
+                    </a>
+                </div>
+
+                <!-- Hotels -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Hotels</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/hotels'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Hotel Applications</span>
+                    </a>
+                </div>
+
+                <!-- Communications -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Communications</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/email-templates'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Email Templates</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/sms-templates'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <span>SMS Templates</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/communications'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                        </svg>
+                        <span>Communications</span>
+                    </a>
+                </div>
+
+                <!-- Operations -->
+                <div class="space-y-1">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Operations</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/scans'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                        </svg>
+                        <span>Scans</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/withdrawals'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>Withdrawals</span>
+                    </a>
+                </div>
+
+                <!-- Settings & Profile -->
+                <div class="space-y-1 pt-4 border-t border-gray-800">
+                    <div class="px-3 py-1">
+                        <h3 class="sidebar-section-title">Account</h3>
+                    </div>
+                    <a href="<?php echo base_url('/admin/settings'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/profile'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        <span>My Profile</span>
+                    </a>
+                    <a href="<?php echo base_url('/logout'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group text-red-400 hover:text-red-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Logout</span>
+                    </a>
+                </div>
             </nav>
         </div>
     </aside>
@@ -176,11 +622,21 @@
                 <span class="font-semibold text-lg"><?php echo htmlspecialchars($siteTitle); ?></span>
                 <?php endif; ?>
 			</a>
-            <button id="navToggle" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-700 hover:border-red-600 bg-[#0f0f10]/60 backdrop-blur-sm" aria-label="Toggle menu" aria-expanded="false">
+            <?php if ($isAdminSidebar): ?>
+            <!-- Mobile Admin Menu Toggle -->
+            <button id="adminMobileToggle" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-700 hover:border-red-600 bg-[#0f0f10]/60 backdrop-blur-sm touch-target cursor-pointer" aria-label="Toggle admin menu" aria-expanded="false" onclick="console.log('Button clicked directly!')">
+                <svg class="w-6 h-6 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <?php else: ?>
+            <!-- Regular Mobile Menu Toggle -->
+            <button id="navToggle" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-700 hover:border-red-600 bg-[#0f0f10]/60 backdrop-blur-sm touch-target" aria-label="Toggle menu" aria-expanded="false">
                 <span id="bar1" class="block w-6 h-0.5 bg-gray-200 transition-transform duration-200 ease-out"></span>
                 <span id="bar2" class="block w-6 h-0.5 bg-gray-200 mt-1.5 transition-opacity duration-200 ease-out"></span>
                 <span id="bar3" class="block w-6 h-0.5 bg-gray-200 mt-1.5 transition-transform duration-200 ease-out"></span>
 			</button>
+            <?php endif; ?>
 			<nav class="hidden md:flex items-center gap-5 text-sm" id="navDesktop">
 				<a class="link" href="<?php echo base_url('/'); ?>">Home</a>
 				<a class="link" href="<?php echo base_url('/events'); ?>">Events</a>
@@ -228,9 +684,14 @@
 		<?php include $viewFile; ?>
 	</main>
 <script>
+// Ensure the script runs
+console.log('Admin layout script loading...');
+
 document.addEventListener('DOMContentLoaded', function(){
+  console.log('DOM loaded, initializing admin mobile sidebar...');
+  // Regular mobile menu toggle
   var t = document.getElementById('navToggle');
-  if(!t) return;
+  if(t) {
   t.addEventListener('click', function(){
     var m=document.getElementById('navMobile');
     if(!m) return; m.classList.toggle('hidden');
@@ -253,6 +714,80 @@ document.addEventListener('DOMContentLoaded', function(){
       b3.style.transform='rotate(-45deg) translate(3px,-3px)';
     }
   });
+  }
+
+  // Admin mobile sidebar toggle
+  var adminToggle = document.getElementById('adminMobileToggle');
+  var mobileSidebar = document.getElementById('mobileSidebar');
+  var overlay = document.getElementById('mobileSidebarOverlay');
+  var closeButton = document.getElementById('mobileSidebarClose');
+  
+  console.log('Mobile sidebar elements:', {
+    adminToggle: !!adminToggle,
+    mobileSidebar: !!mobileSidebar,
+    overlay: !!overlay,
+    closeButton: !!closeButton
+  });
+  
+  if(adminToggle && mobileSidebar && overlay) {
+    function openMobileSidebar() {
+      console.log('Opening mobile sidebar');
+      mobileSidebar.classList.add('active');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeMobileSidebar() {
+      console.log('Closing mobile sidebar');
+      mobileSidebar.classList.remove('active');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    
+    // Add click event listener with debugging
+    adminToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Hamburger menu clicked!');
+      if(mobileSidebar.classList.contains('active')) {
+        closeMobileSidebar();
+      } else {
+        openMobileSidebar();
+      }
+    });
+    
+    // Also add touchstart for better mobile support
+    adminToggle.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      console.log('Hamburger menu touched!');
+      if(mobileSidebar.classList.contains('active')) {
+        closeMobileSidebar();
+      } else {
+        openMobileSidebar();
+      }
+    });
+    
+    overlay.addEventListener('click', closeMobileSidebar);
+    
+    if(closeButton) {
+      closeButton.addEventListener('click', closeMobileSidebar);
+    }
+    
+    // Close sidebar when clicking on a link
+    var sidebarLinks = mobileSidebar.querySelectorAll('a');
+    sidebarLinks.forEach(function(link) {
+      link.addEventListener('click', function() {
+        setTimeout(closeMobileSidebar, 150); // Small delay for smooth transition
+      });
+    });
+    
+    // Close sidebar on escape key
+    document.addEventListener('keydown', function(e) {
+      if(e.key === 'Escape' && mobileSidebar.classList.contains('active')) {
+        closeMobileSidebar();
+      }
+    });
+  }
 });
 </script>
 

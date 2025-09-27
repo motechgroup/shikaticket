@@ -88,11 +88,16 @@ class Sms
                 }
             }
         }
-        // Log
+        // Log with detailed information
         try {
             $stmt = \db()->prepare('INSERT INTO sms_logs (provider, recipient, message, status, response) VALUES (?, ?, ?, ?, ?)');
             $stmt->execute([$this->provider, $to, $message, $ok ? 'sent' : 'failed', $resp]);
-        } catch (\Throwable $e) {}
+            
+            // Log to error log for debugging
+            error_log("SMS Send Attempt - Provider: {$this->provider}, To: {$to}, Status: " . ($ok ? 'SUCCESS' : 'FAILED') . ", Response: " . substr($resp, 0, 200));
+        } catch (\Throwable $e) {
+            error_log("SMS Logging Error: " . $e->getMessage());
+        }
         return $ok;
     }
 

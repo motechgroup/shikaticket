@@ -58,7 +58,7 @@ class TravelBookingController
         // Create booking
         try {
             // Generate booking reference
-            $bookingReference = 'TB' . date('Ymd') . substr(str_shuffle('0123456789'), 0, 6);
+            $bookingReference = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6));
             
             $stmt = db()->prepare('
                 INSERT INTO travel_bookings 
@@ -109,13 +109,24 @@ class TravelBookingController
             FROM travel_bookings tb
             JOIN travel_destinations td ON td.id = tb.destination_id
             JOIN travel_agencies ta ON ta.id = td.agency_id
-            WHERE tb.id = ? AND tb.user_id = ? AND tb.status = ?
+            WHERE tb.id = ? AND tb.user_id = ?
         ');
-        $stmt->execute([$bookingId, $_SESSION['user_id'], 'pending']);
+        $stmt->execute([$bookingId, $_SESSION['user_id']]);
         $booking = $stmt->fetch();
         
         if (!$booking) {
-            flash_set('error', 'Booking not found or already processed.');
+            flash_set('error', 'Booking not found.');
+            redirect(base_url('/travel'));
+        }
+        
+        // If booking is already confirmed and user is coming from payment, redirect to booking page
+        if ($booking['status'] === 'confirmed' && isset($_GET['mpesa_payment'])) {
+            redirect(base_url('/user/travel-bookings/show?id=' . $bookingId . '&payment_success=1'));
+        }
+        
+        // If booking is not pending, show error
+        if ($booking['status'] !== 'pending') {
+            flash_set('error', 'Booking already processed.');
             redirect(base_url('/travel'));
         }
         
@@ -221,6 +232,15 @@ class TravelBookingController
         $timestamp = date('YmdHis');
         $password = base64_encode($businessShortCode . $passkey . $timestamp);
         
+        // Get callback URL configuration (same as PaymentController)
+        $configuredCallback = Setting::get('payments.mpesa.callback_url', '');
+        $callbackUrl = $configuredCallback !== '' ? $configuredCallback : base_url('/pay/mpesa/callback');
+        // Safety: if admin stored only a base URL, append the required callback path
+        if (strpos($callbackUrl, '/pay/mpesa/callback') === false) {
+            $callbackUrl = rtrim($callbackUrl, '/');
+            $callbackUrl .= '/pay/mpesa/callback';
+        }
+        
         $payload = [
             'BusinessShortCode' => $businessShortCode,
             'Password' => $password,
@@ -230,7 +250,7 @@ class TravelBookingController
             'PartyA' => $phone,
             'PartyB' => $businessShortCode,
             'PhoneNumber' => $phone,
-            'CallBackURL' => base_url('/pay/mpesa-callback'),
+            'CallBackURL' => $callbackUrl,
             'AccountReference' => 'TRAVEL' . $booking['id'],
             'TransactionDesc' => 'Travel booking #' . $booking['id']
         ];
@@ -248,12 +268,37 @@ class TravelBookingController
             ],
             CURLOPT_RETURNTRANSFER => true,
         ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        // Log token response for debugging
+        error_log('M-Pesa Token Response: ' . $response);
+        error_log('M-Pesa Token HTTP Code: ' . $httpCode);
+        error_log('M-Pesa Callback URL: ' . $callbackUrl);
+        
+        if ($response === false || !empty($curlError)) {
+            flash_set('error', 'Failed to connect to M-Pesa for authentication: ' . $curlError);
+            redirect(base_url('/travel/checkout?booking_id=' . $booking['id']));
+        }
+        
         $tokenData = json_decode($response, true);
         $accessToken = $tokenData['access_token'] ?? '';
         
         if (empty($accessToken)) {
-            flash_set('error', 'Failed to initialize M-Pesa payment.');
+            $errorMsg = 'Invalid credentials or service unavailable';
+            if (isset($tokenData['error'])) {
+                $errorMsg = $tokenData['error'];
+            } elseif (isset($tokenData['error_description'])) {
+                $errorMsg = $tokenData['error_description'];
+            } elseif ($httpCode !== 200) {
+                $errorMsg = 'HTTP Error ' . $httpCode;
+            }
+            
+            flash_set('error', 'Failed to initialize M-Pesa payment: ' . $errorMsg);
             redirect(base_url('/travel/checkout?booking_id=' . $booking['id']));
         }
         
@@ -268,7 +313,25 @@ class TravelBookingController
             CURLOPT_POSTFIELDS => json_encode($payload),
             CURLOPT_RETURNTRANSFER => true,
         ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        // Log the response for debugging
+        error_log('M-Pesa STK Push Response: ' . $response);
+        error_log('M-Pesa HTTP Code: ' . $httpCode);
+        if ($curlError) {
+            error_log('M-Pesa CURL Error: ' . $curlError);
+        }
+        
+        if ($response === false || !empty($curlError)) {
+            flash_set('error', 'Failed to connect to M-Pesa: ' . $curlError);
+            redirect(base_url('/travel/checkout?booking_id=' . $booking['id']));
+        }
+        
         $result = json_decode($response, true);
         
         if (isset($result['ResponseCode']) && $result['ResponseCode'] === '0') {
@@ -279,7 +342,18 @@ class TravelBookingController
             flash_set('success', 'M-Pesa payment initiated. Please check your phone and enter your PIN.');
             redirect(base_url('/travel/checkout?booking_id=' . $booking['id'] . '&mpesa_payment=1'));
         } else {
-            flash_set('error', 'Failed to initiate M-Pesa payment: ' . ($result['ResponseDescription'] ?? 'Unknown error'));
+            $errorMsg = 'Unknown error';
+            if (isset($result['ResponseDescription'])) {
+                $errorMsg = $result['ResponseDescription'];
+            } elseif (isset($result['errorMessage'])) {
+                $errorMsg = $result['errorMessage'];
+            } elseif (isset($result['error'])) {
+                $errorMsg = $result['error'];
+            } elseif ($httpCode !== 200) {
+                $errorMsg = 'HTTP Error ' . $httpCode;
+            }
+            
+            flash_set('error', 'Failed to initiate M-Pesa payment: ' . $errorMsg);
             redirect(base_url('/travel/checkout?booking_id=' . $booking['id']));
         }
     }
@@ -397,6 +471,8 @@ class TravelBookingController
     {
         // Add debug logging at the very start
         error_log("TravelBookingController::reconcilePayment - Method called");
+        error_log("TravelBookingController::reconcilePayment - POST data: " . json_encode($_POST));
+        error_log("TravelBookingController::reconcilePayment - GET data: " . json_encode($_GET));
         
         require_user();
         
@@ -409,8 +485,9 @@ class TravelBookingController
         
         if ($bookingId <= 0 || $paymentMethod === '') {
             error_log("TravelBookingController::reconcilePayment - Invalid data: bookingId=$bookingId, paymentMethod='$paymentMethod'");
-            flash_set('error', 'Invalid reconciliation data.');
-            redirect(base_url('/user/travel-bookings'));
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid reconciliation data.']);
+            return;
         }
         
         // Get booking details
@@ -426,30 +503,38 @@ class TravelBookingController
         $booking = $stmt->fetch();
         
         if (!$booking) {
-            flash_set('error', 'Booking not found.');
-            redirect(base_url('/user/travel-bookings'));
+            error_log("TravelBookingController::reconcilePayment - Booking not found for ID: $bookingId");
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Booking not found.']);
+            return;
         }
         
         if ($booking['status'] === 'confirmed') {
-            flash_set('success', 'Booking is already confirmed!');
-            redirect(base_url('/user/travel-bookings/show?id=' . $bookingId));
+            error_log("TravelBookingController::reconcilePayment - Booking already confirmed: $bookingId");
+            echo json_encode(['success' => true, 'message' => 'Booking is already confirmed!', 'redirect' => base_url('/user/travel-bookings/show?id=' . $bookingId)]);
+            return;
         }
         
         // Attempt to reconcile based on payment method
         $reconciled = false;
         
         if ($paymentMethod === 'mpesa' && !empty($booking['transaction_reference'])) {
+            error_log("TravelBookingController::reconcilePayment - Attempting M-Pesa reconciliation for booking: $bookingId");
             $reconciled = $this->reconcileMpesaPayment($booking);
         } elseif ($paymentMethod === 'flutterwave' && !empty($booking['transaction_reference'])) {
+            error_log("TravelBookingController::reconcilePayment - Attempting Flutterwave reconciliation for booking: $bookingId");
             $reconciled = $this->reconcileFlutterwavePayment($booking);
+        } else {
+            error_log("TravelBookingController::reconcilePayment - No valid payment method or transaction reference found");
         }
         
         if ($reconciled) {
-            flash_set('success', 'Payment verified and booking confirmed! You will receive an email confirmation shortly.');
-            redirect(base_url('/user/travel-bookings/show?id=' . $bookingId . '&payment_success=1'));
+            error_log("TravelBookingController::reconcilePayment - Payment successfully reconciled for booking: $bookingId");
+            echo json_encode(['success' => true, 'message' => 'Payment confirmed! Your travel booking is now confirmed.', 'redirect' => base_url('/user/travel-bookings/show?id=' . $bookingId . '&payment_success=1')]);
         } else {
-            flash_set('error', 'Unable to verify payment. Please try again later or contact support.');
-            redirect(base_url('/user/travel-bookings/show?id=' . $bookingId));
+            error_log("TravelBookingController::reconcilePayment - Payment reconciliation failed for booking: $bookingId");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Payment not yet confirmed. Please try again in a few moments.']);
         }
     }
     
@@ -526,8 +611,10 @@ class TravelBookingController
             db()->prepare('UPDATE travel_bookings SET status = ? WHERE id = ?')
                 ->execute(['confirmed', $booking['id']]);
             
-            // Send confirmation email
+            // Send confirmation email and SMS
+            error_log("TravelBookingController::reconcileMpesaPayment - Calling sendTravelBookingConfirmation for booking: " . $booking['id']);
             $this->sendTravelBookingConfirmation($booking['id']);
+            error_log("TravelBookingController::reconcileMpesaPayment - sendTravelBookingConfirmation completed for booking: " . $booking['id']);
             
             error_log("TravelBookingController::reconcileMpesaPayment - Payment successfully reconciled for booking: " . $booking['id']);
             return true;
@@ -636,8 +723,12 @@ class TravelBookingController
             
             // Send SMS notification
             try {
+                error_log("TravelBookingController::sendTravelBookingConfirmation - Attempting to send SMS for booking: " . $bookingId);
+                
                 $sms = new \App\Services\Sms();
                 if ($sms->isConfigured()) {
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - SMS service is configured");
+                    
                     // Generate public ticket link (no login required)
                     $ticketLink = base_url('/travel-tickets/view?code=' . $ticketCode);
                     
@@ -651,19 +742,29 @@ class TravelBookingController
                         'agency_phone' => $booking['agency_phone']
                     ]);
                     
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - SMS template result: " . $message);
+                    
                     // Fallback if no template is configured
                     if ($message === '') {
                         $message = "Travel booking confirmed! Destination: " . $booking['destination_title'] . 
                                   ". Ticket Code: " . $ticketCode . 
                                   ". View ticket: " . $ticketLink .
                                   ". Contact: " . $booking['company_name'] . " at " . $booking['agency_phone'];
+                        error_log("TravelBookingController::sendTravelBookingConfirmation - Using fallback SMS message");
                     }
                     
-                    $sms->send($booking['user_phone'], $message);
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - Sending SMS to: " . $booking['user_phone']);
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - SMS message: " . $message);
+                    
+                    $result = $sms->send($booking['user_phone'], $message);
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - SMS send result: " . json_encode($result));
+                } else {
+                    error_log("TravelBookingController::sendTravelBookingConfirmation - SMS service is not configured");
                 }
             } catch (\Throwable $e) {
                 // SMS sending failed, but email was sent
-                error_log("SMS sending failed for travel booking: " . $e->getMessage());
+                error_log("TravelBookingController::sendTravelBookingConfirmation - SMS sending failed for travel booking: " . $e->getMessage());
+                error_log("TravelBookingController::sendTravelBookingConfirmation - SMS error trace: " . $e->getTraceAsString());
             }
             
         } catch (\Throwable $e) {

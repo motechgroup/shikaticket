@@ -7,6 +7,22 @@ class TravelAuthController
 {
     public function login(): void
     {
+        // Clear any existing travel agency session to ensure clean login state
+        if (isset($_SESSION['travel_agency_id'])) {
+            // If there's a travel agency session, check if it's valid
+            $agency = \App\Models\TravelAgency::findById($_SESSION['travel_agency_id']);
+            if ($agency && $agency['is_approved']) {
+                // Valid session, redirect to dashboard
+                redirect(base_url('/travel/dashboard'));
+                return;
+            } else {
+                // Invalid or unapproved session, clear it
+                unset($_SESSION['travel_agency_id']);
+                unset($_SESSION['travel_agency_name']);
+                unset($_SESSION['travel_agency_email']);
+            }
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = trim($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
@@ -42,7 +58,7 @@ class TravelAuthController
             redirect(base_url('/travel/dashboard'));
         }
 
-        view('travel/auth/login');
+        travel_view('travel/auth/login');
     }
 
     public function register(): void
@@ -110,16 +126,44 @@ class TravelAuthController
             }
         }
 
-        view('travel/auth/register');
+        travel_view('travel/auth/register');
     }
 
     public function logout(): void
     {
+        // CSRF verification is handled by the Router automatically
+        
+        // Clear all travel agency session variables
         unset($_SESSION['travel_agency_id']);
         unset($_SESSION['travel_agency_name']);
         unset($_SESSION['travel_agency_email']);
         
+        // Also clear any other travel-related session data
+        unset($_SESSION['travel_agency_token']);
+        unset($_SESSION['travel_agency_approved']);
+        
+        // Destroy the entire session to ensure clean logout
+        session_destroy();
+        session_start();
+        
         flash_set('success', 'Logged out successfully.');
+        redirect(base_url('/travel/login'));
+    }
+
+    public function clearSession(): void
+    {
+        // Clear all travel agency session variables
+        unset($_SESSION['travel_agency_id']);
+        unset($_SESSION['travel_agency_name']);
+        unset($_SESSION['travel_agency_email']);
+        unset($_SESSION['travel_agency_token']);
+        unset($_SESSION['travel_agency_approved']);
+        
+        // Destroy the entire session to ensure clean logout
+        session_destroy();
+        session_start();
+        
+        flash_set('success', 'Session cleared successfully.');
         redirect(base_url('/travel/login'));
     }
 }

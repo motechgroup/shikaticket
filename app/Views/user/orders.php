@@ -183,22 +183,84 @@
   if(!focusId) return;
   
   let attempts=0;
-  const poll = setInterval(function(){
+  let isPolling = true;
+  let pollInterval;
+  
+  // Mobile-optimized polling function
+  function pollPaymentStatus() {
+    if (!isPolling) return;
+    
     attempts++;
-    fetch('<?php echo base_url('/orders/status'); ?>?id=' + encodeURIComponent(focusId))
-      .then(r=>r.json()).then(j=>{
+    console.log('Orders page payment status check attempt:', attempts);
+    
+    // Use fetch with timeout for mobile compatibility
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    fetch('<?php echo base_url('/orders/status'); ?>?id=' + encodeURIComponent(focusId) + '&_t=' + Date.now(), {
+      signal: controller.signal,
+      cache: 'no-cache',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
+      .then(r => {
+        clearTimeout(timeoutId);
+        if (!r.ok) throw new Error('Network error: ' + r.status);
+        return r.json();
+      })
+      .then(j => {
+        console.log('Orders page payment status response:', j);
         if(j.status === 'paid'){
-          clearInterval(poll);
-          window.location.href = '<?php echo base_url('/user/orders/show'); ?>?id=' + focusId;
+          isPolling = false;
+          clearInterval(pollInterval);
+          window.location.href = '<?php echo base_url('/user/orders/show'); ?>?id=' + focusId + '&payment_success=1';
         }
-        if(attempts>30){
-          clearInterval(poll);
+        if(attempts >= 30){
+          isPolling = false;
+          clearInterval(pollInterval);
           // Fallback reconciliation if callback missed
           fetch('<?php echo base_url('/pay/mpesa/reconcile'); ?>?order_id=' + encodeURIComponent(focusId))
             .then(()=>window.location.reload());
         }
-      }).catch(()=>{});
-  }, 2000);
+      })
+      .catch(error => {
+        clearTimeout(timeoutId);
+        console.log('Orders page status check failed, attempt:', attempts, 'Error:', error.message);
+        
+        if(attempts >= 30){
+          isPolling = false;
+          clearInterval(pollInterval);
+          // Fallback reconciliation if callback missed
+          fetch('<?php echo base_url('/pay/mpesa/reconcile'); ?>?order_id=' + encodeURIComponent(focusId))
+            .then(()=>window.location.reload());
+        }
+      });
+  }
+  
+  // Start polling with mobile-optimized interval
+  pollInterval = setInterval(pollPaymentStatus, 3000); // 3 seconds for mobile
+  
+  // Handle page visibility changes (mobile browser tab switching)
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && isPolling) {
+      // Page became visible, poll immediately
+      setTimeout(pollPaymentStatus, 500);
+    }
+  });
+  
+  // Handle online/offline events
+  window.addEventListener('online', function() {
+    if (isPolling) {
+      console.log('Network back online, resuming polling on orders page');
+      setTimeout(pollPaymentStatus, 1000);
+    }
+  });
+  
+  window.addEventListener('offline', function() {
+    console.log('Network offline, polling will continue when back online');
+  });
 })();
 </script>
 
@@ -224,8 +286,10 @@
     // Force reconciliation then hard reload to fetch updated status
     fetch('<?php echo base_url('/pay/mpesa/reconcile'); ?>?order_id=' + encodeURIComponent(targetId))
       .then(()=>{
-        // Small delay to allow DB update
-        setTimeout(()=>{ window.location.reload(); }, 1200);
+        // Small delay to allow DB update, then redirect to order show page with success
+        setTimeout(()=>{ 
+          window.location.href = '<?php echo base_url('/user/orders/show'); ?>?id=' + targetId + '&payment_success=1';
+        }, 1200);
       })
       .catch(()=>{ window.location.reload(); })
       .finally(()=>{ btn.disabled=false; btn.textContent='Get My Ticket'; });

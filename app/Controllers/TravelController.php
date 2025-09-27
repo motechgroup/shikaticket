@@ -43,7 +43,7 @@ class TravelController
         $recentBookings->execute([$agencyId]);
         $recentBookings = $recentBookings->fetchAll();
         
-        view('travel/dashboard', compact('agency', 'destinationsCount', 'featuredCount', 'bookings', 'recentBookings'));
+        travel_view('travel/dashboard', compact('agency', 'destinationsCount', 'featuredCount', 'bookings', 'recentBookings'));
     }
 
     public function destinations(): void
@@ -53,7 +53,7 @@ class TravelController
         $agencyId = $_SESSION['travel_agency_id'];
         $destinations = TravelAgency::getDestinationsByAgency($agencyId);
         
-        view('travel/destinations/index', compact('destinations'));
+        travel_view('travel/destinations/index', compact('destinations'));
     }
 
     public function destinationCreate(): void
@@ -158,7 +158,7 @@ class TravelController
             }
         }
 
-        view('travel/destinations/create');
+        travel_view('travel/destinations/create');
     }
 
     public function destinationEdit(): void
@@ -206,7 +206,7 @@ class TravelController
         }
 
         // Render edit view quickly by reusing create form with prefill (simple version)
-        view('travel/destinations/create', ['dest' => $dest]);
+        travel_view('travel/destinations/create', ['dest' => $dest]);
     }
 
     public function bookings(): void
@@ -226,7 +226,7 @@ class TravelController
         $bookings->execute([$agencyId]);
         $bookings = $bookings->fetchAll();
         
-        view('travel/bookings', compact('bookings'));
+        travel_view('travel/bookings', compact('bookings'));
     }
 
     public function profile(): void
@@ -295,7 +295,7 @@ class TravelController
             }
         }
 
-        view('travel/profile', compact('agency'));
+        travel_view('travel/profile', compact('agency'));
     }
 
     public function startPhoneVerify(): void
@@ -385,7 +385,7 @@ class TravelController
         $overallWithdrawn = (float)(db()->query('SELECT COALESCE(SUM(amount),0) AS wsum FROM withdrawals WHERE travel_agency_id='.(int)$agencyId.' AND status IN ("approved","paid")')->fetch()['wsum'] ?? 0);
         $overallAvailable = max(0, $overallGross - $overallCommission - $overallWithdrawn);
         
-        view('travel/withdrawals', compact('withdrawals', 'destinations', 'balances', 'overallAvailable', 'commission'));
+        travel_view('travel/withdrawals', compact('withdrawals', 'destinations', 'balances', 'overallAvailable', 'commission'));
     }
     
     public function requestWithdrawal(): void
@@ -451,5 +451,88 @@ class TravelController
         } catch (\Throwable $e) {}
         
         redirect(base_url('/travel/withdrawals'));
+    }
+    
+    public function scanner(): void
+    {
+        require_travel_agency();
+        $agencyId = $_SESSION['travel_agency_id'];
+        $stmt = db()->prepare('SELECT * FROM travel_scanner_devices WHERE travel_agency_id = ?');
+        $stmt->execute([$agencyId]);
+        $devices = $stmt->fetchAll();
+        travel_view('travel/scanner/index', compact('devices'));
+    }
+    
+    public function createScanner(): void
+    {
+        require_travel_agency();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            verify_csrf();
+            $agencyId = $_SESSION['travel_agency_id'];
+            $deviceName = $_POST['device_name'] ?? '';
+            
+            if (empty($deviceName)) {
+                flash_set('error', 'Device name cannot be empty.');
+                redirect(base_url('/travel/scanner/create'));
+            }
+
+            $deviceCode = 'TRAVEL_' . strtoupper(bin2hex(random_bytes(4)));
+
+            try {
+                $stmt = db()->prepare('INSERT INTO travel_scanner_devices (travel_agency_id, device_name, device_code) VALUES (?, ?, ?)');
+                $stmt->execute([$agencyId, $deviceName, $deviceCode]);
+                flash_set('success', 'Scanner device created successfully! Code: ' . $deviceCode);
+                redirect(base_url('/travel/scanner'));
+            } catch (Exception $e) {
+                flash_set('error', 'Failed to create scanner device: ' . $e->getMessage());
+                redirect(base_url('/travel/scanner/create'));
+            }
+        }
+        travel_view('travel/scanner/create');
+    }
+    
+    public function deleteScanner(): void
+    {
+        require_travel_agency();
+        verify_csrf();
+        $deviceId = $_POST['device_id'] ?? null;
+        $agencyId = $_SESSION['travel_agency_id'];
+
+        if (!$deviceId) {
+            flash_set('error', 'Invalid device ID.');
+            redirect(base_url('/travel/scanner'));
+        }
+
+        try {
+            $stmt = db()->prepare('DELETE FROM travel_scanner_devices WHERE id = ? AND travel_agency_id = ?');
+            $stmt->execute([$deviceId, $agencyId]);
+            flash_set('success', 'Scanner device deleted successfully.');
+        } catch (Exception $e) {
+            flash_set('error', 'Failed to delete scanner device: ' . $e->getMessage());
+        }
+        redirect(base_url('/travel/scanner'));
+    }
+    
+    public function toggleScanner(): void
+    {
+        require_travel_agency();
+        verify_csrf();
+        $deviceId = $_POST['device_id'] ?? null;
+        $agencyId = $_SESSION['travel_agency_id'];
+        $isActive = $_POST['is_active'] ?? null;
+
+        if (!$deviceId || !in_array($isActive, ['0', '1'])) {
+            flash_set('error', 'Invalid request.');
+            redirect(base_url('/travel/scanner'));
+        }
+
+        try {
+            $stmt = db()->prepare('UPDATE travel_scanner_devices SET is_active = ? WHERE id = ? AND travel_agency_id = ?');
+            $stmt->execute([$isActive, $deviceId, $agencyId]);
+            flash_set('success', 'Scanner device status updated.');
+        } catch (Exception $e) {
+            flash_set('error', 'Failed to update device status: ' . $e->getMessage());
+        }
+        redirect(base_url('/travel/scanner'));
     }
 }

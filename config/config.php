@@ -24,6 +24,25 @@ function view(string $path, array $data = []): void {
 	include __DIR__ . '/../app/Views/layouts/main.php';
 }
 
+function travel_view(string $path, array $data = []): void {
+	extract($data);
+	$viewFile = __DIR__ . '/../app/Views/' . $path . '.php';
+	
+	// Capture the view content
+	ob_start();
+	include $viewFile;
+	$content = ob_get_clean();
+	
+	// Include the travel layout with the content
+	include __DIR__ . '/../app/Views/layouts/travel.php';
+}
+
+function standalone_view(string $path, array $data = []): void {
+	extract($data);
+	$viewFile = __DIR__ . '/../app/Views/' . $path . '.php';
+	include $viewFile;
+}
+
 function redirect(string $to): void {
     // Ensure absolute URL to avoid redirecting to localhost in proxied environments
     $scheme = parse_url($to, PHP_URL_SCHEME);
@@ -58,12 +77,12 @@ function csrf_token(): string {
 }
 
 function csrf_field(): string {
-	return '<input type="hidden" name="_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES) . '">';
+	return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES) . '">';
 }
 
 function verify_csrf(): void {
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		$token = $_POST['_token'] ?? '';
+		$token = $_POST['csrf_token'] ?? '';
 		if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
 			http_response_code(419);
 			echo 'CSRF token mismatch.';
@@ -76,6 +95,11 @@ function verify_csrf(): void {
 function base_url(string $path = ''): string {
 	$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 	$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+	
+	// Force HTTPS for ngrok URLs
+	if (strpos($host, 'ngrok') !== false) {
+		$scheme = 'https';
+	}
 	
 	// Fix for localhost with extra dot
 	if ($host === 'localhost.') {
