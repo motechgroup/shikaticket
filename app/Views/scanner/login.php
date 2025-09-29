@@ -24,13 +24,13 @@
 		<?php echo csrf_field(); ?>
 		<div>
 			<label class="block text-sm mb-1">Device Code</label>
-			<input name="device_code" type="text" required class="input uppercase-input" placeholder="ABC12345" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off">
+			<input name="device_code" type="text" required class="input uppercase-input" placeholder="T123456" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" value="<?php echo htmlspecialchars($_GET['device_code'] ?? ''); ?>">
 		</div>
 		<button class="btn btn-primary w-full">Login</button>
 	</form>
 	<div class="mt-4 text-sm text-gray-400 text-center">
-		<p>Enter the device code provided by the event organizer.</p>
-		<p class="mt-2">Device must be assigned to an active event.</p>
+		<p>Enter the device code provided by the organizer or travel agency.</p>
+		<p class="mt-2">Device must be active and properly configured.</p>
 	</div>
 </div>
 

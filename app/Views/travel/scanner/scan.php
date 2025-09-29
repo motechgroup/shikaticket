@@ -335,7 +335,7 @@ document.getElementById('scan-form').addEventListener('submit', async function(e
     try {
         const formData = new FormData();
         formData.append('booking_reference', bookingReference);
-        formData.append('_token', '<?php echo csrf_token(); ?>');
+        formData.append('csrf_token', '<?php echo csrf_token(); ?>');
         
         const response = await fetch('<?php echo base_url('/travel/scanner/verify'); ?>', {
             method: 'POST',

@@ -31,7 +31,37 @@ class AdminController
             $travelRows = db()->query("SELECT td.agency_id, ta.commission_percent, SUM(CASE WHEN tp.payment_status='paid' THEN tb.total_amount ELSE 0 END) AS gross FROM travel_destinations td JOIN travel_bookings tb ON tb.destination_id = td.id JOIN travel_payments tp ON tp.booking_id = tb.id JOIN travel_agencies ta ON ta.id = td.agency_id GROUP BY td.agency_id, ta.commission_percent")->fetchAll();
             foreach ($travelRows as $r) { $commissionRevenue += ((float)($r['commission_percent'] ?? 0) / 100.0) * (float)($r['gross'] ?? 0); }
         } catch (\Throwable $e) {}
-        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue'));
+        
+        // Get pending feature requests
+        $featureRequests = [];
+        try {
+            $featureRequests = db()->query("
+                SELECT 
+                    fr.*,
+                    CASE 
+                        WHEN fr.content_type = 'event' THEN e.title
+                        WHEN fr.content_type = 'travel_destination' THEN td.title
+                    END as content_title,
+                    CASE 
+                        WHEN fr.requester_type = 'organizer' THEN o.full_name
+                        WHEN fr.requester_type = 'travel_agency' THEN ta.company_name
+                    END as requester_name,
+                    CASE 
+                        WHEN fr.requester_type = 'organizer' THEN o.email
+                        WHEN fr.requester_type = 'travel_agency' THEN ta.email
+                    END as requester_email
+                FROM feature_requests fr
+                LEFT JOIN events e ON fr.content_type = 'event' AND fr.content_id = e.id
+                LEFT JOIN travel_destinations td ON fr.content_type = 'travel_destination' AND fr.content_id = td.id
+                LEFT JOIN organizers o ON fr.requester_type = 'organizer' AND fr.requester_id = o.id
+                LEFT JOIN travel_agencies ta ON fr.requester_type = 'travel_agency' AND fr.requester_id = ta.id
+                WHERE fr.status = 'pending'
+                ORDER BY fr.created_at DESC
+                LIMIT 10
+            ")->fetchAll();
+        } catch (\Throwable $e) {}
+        
+        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue', 'featureRequests'));
 	}
 
 	public function loginForm(): void
@@ -72,6 +102,50 @@ class AdminController
 		if ($password !== '') { Setting::set('admin.password', $password); }
 		flash_set('success', 'Profile updated.');
 		redirect(base_url('/admin/profile'));
+	}
+
+	public function verifyOrganizerPayment(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$id = (int)($_POST['id'] ?? 0);
+		$action = trim($_POST['action'] ?? '');
+		
+		if ($id > 0 && in_array($action, ['verify', 'reject'])) {
+			$verified = $action === 'verify' ? 1 : 0;
+			db()->prepare('UPDATE organizers SET payment_info_verified = ? WHERE id = ?')->execute([$verified, $id]);
+			
+			if ($action === 'verify') {
+				flash_set('success', 'Organizer payment information verified.');
+			} else {
+				flash_set('success', 'Organizer payment information rejected.');
+			}
+		}
+		
+		redirect(base_url('/admin/organizers/show?id=' . $id));
+	}
+
+	public function verifyTravelAgencyPayment(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$id = (int)($_POST['id'] ?? 0);
+		$action = trim($_POST['action'] ?? '');
+		
+		if ($id > 0 && in_array($action, ['verify', 'reject'])) {
+			$verified = $action === 'verify' ? 1 : 0;
+			db()->prepare('UPDATE travel_agencies SET payment_info_verified = ? WHERE id = ?')->execute([$verified, $id]);
+			
+			if ($action === 'verify') {
+				flash_set('success', 'Travel agency payment information verified.');
+			} else {
+				flash_set('success', 'Travel agency payment information rejected.');
+			}
+		}
+		
+		redirect(base_url('/admin/travel/agencies/show?id=' . $id));
 	}
 
 	public function organizers(): void
@@ -119,6 +193,97 @@ class AdminController
 		redirect(base_url('/admin/organizers'));
 	}
 
+	public function deleteOrganizer(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$id = (int)($_POST['id'] ?? 0);
+		if ($id <= 0) {
+			flash_set('error', 'Invalid organizer ID.');
+			redirect(base_url('/admin/organizers'));
+			return;
+		}
+
+		// Check if organizer exists
+		$organizer = db()->prepare('SELECT * FROM organizers WHERE id = ?');
+		$organizer->execute([$id]);
+		$org = $organizer->fetch();
+		
+		if (!$org) {
+			flash_set('error', 'Organizer not found.');
+			redirect(base_url('/admin/organizers'));
+			return;
+		}
+
+		// Check if organizer has any events
+		$eventsCount = db()->prepare('SELECT COUNT(*) FROM events WHERE organizer_id = ?');
+		$eventsCount->execute([$id]);
+		$hasEvents = $eventsCount->fetchColumn() > 0;
+
+		// Start transaction for data integrity
+		$db = db();
+		$db->beginTransaction();
+		
+		try {
+			if ($hasEvents) {
+				// Get all events for this organizer
+				$events = db()->prepare('SELECT id FROM events WHERE organizer_id = ?');
+				$events->execute([$id]);
+				$eventIds = $events->fetchAll(PDO::FETCH_COLUMN);
+
+				foreach ($eventIds as $eventId) {
+					// Delete tickets for this event
+					db()->prepare('DELETE FROM tickets WHERE order_item_id IN (SELECT id FROM order_items WHERE event_id = ?)')->execute([$eventId]);
+					
+					// Delete order items for this event
+					db()->prepare('DELETE FROM order_items WHERE event_id = ?')->execute([$eventId]);
+					
+					// Delete orders that only contain this event (orphaned orders)
+					$ordersToDelete = db()->prepare('
+						SELECT o.id FROM orders o 
+						LEFT JOIN order_items oi ON oi.order_id = o.id 
+						WHERE o.organizer_id = ? AND oi.id IS NULL
+					');
+					$ordersToDelete->execute([$id]);
+					$orphanedOrderIds = $ordersToDelete->fetchAll(PDO::FETCH_COLUMN);
+					
+					if (!empty($orphanedOrderIds)) {
+						$placeholders = str_repeat('?,', count($orphanedOrderIds) - 1) . '?';
+						db()->prepare("DELETE FROM payments WHERE order_id IN ($placeholders)")->execute($orphanedOrderIds);
+						db()->prepare("DELETE FROM orders WHERE id IN ($placeholders)")->execute($orphanedOrderIds);
+					}
+				}
+				
+				// Delete all events for this organizer
+				db()->prepare('DELETE FROM events WHERE organizer_id = ?')->execute([$id]);
+			}
+
+			// Delete organizer tokens
+			db()->prepare('DELETE FROM organizer_tokens WHERE organizer_id = ?')->execute([$id]);
+			
+			// Delete organizer followers
+			db()->prepare('DELETE FROM organizer_followers WHERE organizer_id = ?')->execute([$id]);
+			
+			// Delete withdrawals for this organizer
+			db()->prepare('DELETE FROM withdrawals WHERE organizer_id = ?')->execute([$id]);
+			
+			// Finally, delete the organizer
+			db()->prepare('DELETE FROM organizers WHERE id = ?')->execute([$id]);
+			
+			$db->commit();
+			
+			$eventText = $hasEvents ? ' and all associated events, tickets, and orders' : '';
+			flash_set('success', "Organizer '{$org['full_name']}' has been deleted{$eventText}.");
+			
+		} catch (Exception $e) {
+			$db->rollBack();
+			flash_set('error', 'Failed to delete organizer. Please try again.');
+		}
+		
+		redirect(base_url('/admin/organizers'));
+	}
+
 	public function users(): void
 	{
 		require_admin();
@@ -154,16 +319,6 @@ class AdminController
 		$active = (int)($_POST['is_active'] ?? 1);
 		if ($id > 0) {
 			db()->prepare('UPDATE organizers SET is_active = ? WHERE id = ?')->execute([$active, $id]);
-		}
-		redirect(base_url('/admin/organizers'));
-	}
-
-	public function deleteOrganizer(): void
-	{
-		require_admin();
-		$id = (int)($_POST['id'] ?? 0);
-		if ($id > 0) {
-			db()->prepare('DELETE FROM organizers WHERE id = ?')->execute([$id]);
 		}
 		redirect(base_url('/admin/organizers'));
 	}
@@ -495,6 +650,471 @@ class AdminController
         redirect(base_url('/admin/travel/agencies'));
     }
 
+    public function toggleTravelAgency(): void
+    {
+        require_admin();
+        verify_csrf();
+        $id = (int)($_POST['id'] ?? 0);
+        $isActive = (int)($_POST['is_active'] ?? 0);
+        if ($id > 0) {
+            db()->prepare('UPDATE travel_agencies SET is_active = ? WHERE id = ?')->execute([$isActive, $id]);
+            flash_set('success', 'Travel agency status updated.');
+        }
+		redirect(base_url('/admin/travel/agencies/show?id=' . $id));
+	}
+
+	public function createAccounts(): void
+	{
+		require_admin();
+		view('admin/create_accounts');
+	}
+
+	public function createUser(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$fullName = trim($_POST['full_name'] ?? '');
+		$email = trim($_POST['email'] ?? '');
+		$phone = trim($_POST['phone'] ?? '');
+		$password = trim($_POST['password'] ?? '');
+		$isActive = (int)($_POST['is_active'] ?? 1);
+		$sendEmail = isset($_POST['send_email']);
+		$sendSms = isset($_POST['send_sms']);
+		
+		if (empty($fullName) || empty($email)) {
+			flash_set('error', 'Full name and email are required.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Check if email already exists
+		$existingUser = db()->prepare('SELECT id FROM users WHERE email = ?');
+		$existingUser->execute([$email]);
+		if ($existingUser->fetch()) {
+			flash_set('error', 'A user with this email already exists.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Split full name into first and last name
+		$fullName = trim($fullName); // Clean the input first
+		$nameParts = explode(' ', $fullName, 2);
+		$firstName = trim($nameParts[0]);
+		$lastName = isset($nameParts[1]) ? trim($nameParts[1]) : '';
+		
+		// Generate password if not provided
+		if (empty($password)) {
+			$password = $this->generateSecurePassword();
+		}
+		
+		$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+		
+		// Create user
+		$stmt = db()->prepare('INSERT INTO users (first_name, last_name, email, phone, password_hash, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+		$stmt->execute([$firstName, $lastName, $email, $phone, $passwordHash, $isActive]);
+		
+		$userId = db()->lastInsertId();
+		
+		// Send credentials
+		$this->sendUserCredentials($userId, $email, $password, $phone, $sendEmail, $sendSms);
+		
+		flash_set('success', 'User account created successfully. Credentials have been sent.');
+		redirect(base_url('/admin/accounts/create'));
+	}
+
+	public function createOrganizer(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$fullName = trim($_POST['full_name'] ?? '');
+		$email = trim($_POST['email'] ?? '');
+		$phone = trim($_POST['phone'] ?? '');
+		$password = trim($_POST['password'] ?? '');
+		$commissionPercent = (float)($_POST['commission_percent'] ?? 10.0);
+		$isApproved = (int)($_POST['is_approved'] ?? 1);
+		$sendEmail = isset($_POST['send_email']);
+		$sendSms = isset($_POST['send_sms']);
+		
+		if (empty($fullName) || empty($email) || empty($phone)) {
+			flash_set('error', 'Full name, email, and phone are required.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Check if email already exists
+		$existingOrg = db()->prepare('SELECT id FROM organizers WHERE email = ?');
+		$existingOrg->execute([$email]);
+		if ($existingOrg->fetch()) {
+			flash_set('error', 'An organizer with this email already exists.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Generate password if not provided
+		if (empty($password)) {
+			$password = $this->generateSecurePassword();
+		}
+		
+		$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+		
+		// Create organizer
+		$stmt = db()->prepare('INSERT INTO organizers (full_name, email, phone, password_hash, commission_percent, is_approved, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+		$stmt->execute([$fullName, $email, $phone, $passwordHash, $commissionPercent, $isApproved]);
+		
+		$organizerId = db()->lastInsertId();
+		
+		// Send credentials
+		$this->sendOrganizerCredentials($organizerId, $email, $password, $phone, $sendEmail, $sendSms);
+		
+		flash_set('success', 'Organizer account created successfully. Credentials have been sent.');
+		redirect(base_url('/admin/accounts/create'));
+	}
+
+	public function createTravelAgency(): void
+	{
+		require_admin();
+		verify_csrf();
+		
+		$companyName = trim($_POST['company_name'] ?? '');
+		$contactPerson = trim($_POST['contact_person'] ?? '');
+		$email = trim($_POST['email'] ?? '');
+		$phone = trim($_POST['phone'] ?? '');
+		$password = trim($_POST['password'] ?? '');
+		$website = trim($_POST['website'] ?? '');
+		$city = trim($_POST['city'] ?? '');
+		$country = trim($_POST['country'] ?? '');
+		$commissionRate = (float)($_POST['commission_rate'] ?? 10.0);
+		$description = trim($_POST['description'] ?? '');
+		$isApproved = (int)($_POST['is_approved'] ?? 1);
+		$sendEmail = isset($_POST['send_email']);
+		$sendSms = isset($_POST['send_sms']);
+		
+		if (empty($companyName) || empty($contactPerson) || empty($email) || empty($phone)) {
+			flash_set('error', 'Company name, contact person, email, and phone are required.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Check if email already exists
+		$existingAgency = db()->prepare('SELECT id FROM travel_agencies WHERE email = ?');
+		$existingAgency->execute([$email]);
+		if ($existingAgency->fetch()) {
+			flash_set('error', 'A travel agency with this email already exists.');
+			redirect(base_url('/admin/accounts/create'));
+			return;
+		}
+		
+		// Generate password if not provided
+		if (empty($password)) {
+			$password = $this->generateSecurePassword();
+		}
+		
+		$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+		
+		// Handle logo upload
+		$logoPath = null;
+		if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+			$uploadDir = __DIR__ . '/../../public/uploads/travel/agencies/';
+			if (!is_dir($uploadDir)) {
+				mkdir($uploadDir, 0777, true);
+			}
+			
+			$extension = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
+			$filename = 'agency_' . time() . '_' . rand(1000, 9999) . '.' . $extension;
+			$uploadPath = $uploadDir . $filename;
+			
+			if (move_uploaded_file($_FILES['logo']['tmp_name'], $uploadPath)) {
+				$logoPath = 'uploads/travel/agencies/' . $filename;
+			}
+		}
+		
+		// Create travel agency
+		$stmt = db()->prepare('INSERT INTO travel_agencies (company_name, contact_person, email, phone, password_hash, website, city, country, description, commission_rate, is_approved, logo_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
+		$stmt->execute([$companyName, $contactPerson, $email, $phone, $passwordHash, $website, $city, $country, $description, $commissionRate, $isApproved, $logoPath]);
+		
+		$agencyId = db()->lastInsertId();
+		
+		// Send credentials
+		$this->sendTravelAgencyCredentials($agencyId, $email, $password, $phone, $sendEmail, $sendSms);
+		
+		flash_set('success', 'Travel agency account created successfully. Credentials have been sent.');
+		redirect(base_url('/admin/accounts/create'));
+	}
+
+	private function generateSecurePassword(): string
+	{
+		$chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+		$password = '';
+		$length = 12;
+		
+		for ($i = 0; $i < $length; $i++) {
+			$password .= $chars[rand(0, strlen($chars) - 1)];
+		}
+		
+		return $password;
+	}
+
+	private function processTemplate($template, $variables): string
+	{
+		$processed = $template;
+		foreach ($variables as $key => $value) {
+			$processed = str_replace('{{' . $key . '}}', $value, $processed);
+		}
+		return $processed;
+	}
+
+	private function sendUserCredentials($userId, $email, $password, $phone, $sendEmail, $sendSms): void
+	{
+		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$loginUrl = base_url('/login');
+		
+		// Send email
+		if ($sendEmail) {
+			try {
+				// Get email template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_user_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$body = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$body = "Welcome to {$siteName}!\n\nYour account has been created with the following credentials:\n\nEmail: {$email}\nPassword: {$password}\n\nYou can log in at: {$loginUrl}\n\nPlease change your password after your first login for security.\n\nBest regards,\n{$siteName} Team";
+				}
+				
+				$subject = "Welcome to {$siteName} - Your Account Credentials";
+				
+				$mail = new \App\Services\Mail();
+				if ($mail->isConfigured()) {
+					$mail->send($email, $subject, $body);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+		
+		// Send SMS
+		if ($sendSms && !empty($phone)) {
+			try {
+				// Get SMS template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_user_sms_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$message = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$message = "Welcome to {$siteName}! Your account is ready. Email: {$email}, Password: {$password}. Login: {$loginUrl}";
+				}
+				
+				$sms = new \App\Services\Sms();
+				if ($sms->isConfigured()) {
+					$sms->send($phone, $message);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+	}
+
+	private function sendOrganizerCredentials($organizerId, $email, $password, $phone, $sendEmail, $sendSms): void
+	{
+		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$loginUrl = base_url('/organizer/login');
+		
+		// Send email
+		if ($sendEmail) {
+			try {
+				// Get email template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_organizer_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$body = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$body = "Welcome to {$siteName} as an Event Organizer!\n\nYour organizer account has been created with the following credentials:\n\nEmail: {$email}\nPassword: {$password}\n\nYou can access your organizer dashboard at: {$loginUrl}\n\nPlease change your password after your first login for security.\n\nBest regards,\n{$siteName} Team";
+				}
+				
+				$subject = "Welcome to {$siteName} - Organizer Account Created";
+				
+				$mail = new \App\Services\Mail();
+				if ($mail->isConfigured()) {
+					$mail->send($email, $subject, $body);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+		
+		// Send SMS
+		if ($sendSms && !empty($phone)) {
+			try {
+				// Get SMS template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_organizer_sms_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$message = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$message = "Welcome to {$siteName}! Your organizer account is ready. Email: {$email}, Password: {$password}. Login: {$loginUrl}";
+				}
+				
+				$sms = new \App\Services\Sms();
+				if ($sms->isConfigured()) {
+					$sms->send($phone, $message);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+	}
+
+	private function sendTravelAgencyCredentials($agencyId, $email, $password, $phone, $sendEmail, $sendSms): void
+	{
+		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$loginUrl = base_url('/travel/login');
+		
+		// Send email
+		if ($sendEmail) {
+			try {
+				// Get email template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_travel_agency_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$body = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$body = "Welcome to {$siteName} as a Travel Agency!\n\nYour travel agency account has been created with the following credentials:\n\nEmail: {$email}\nPassword: {$password}\n\nYou can access your travel agency dashboard at: {$loginUrl}\n\nPlease change your password after your first login for security.\n\nBest regards,\n{$siteName} Team";
+				}
+				
+				$subject = "Welcome to {$siteName} - Travel Agency Account Created";
+				
+				$mail = new \App\Services\Mail();
+				if ($mail->isConfigured()) {
+					$mail->send($email, $subject, $body);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+		
+		// Send SMS
+		if ($sendSms && !empty($phone)) {
+			try {
+				// Get SMS template
+				$template = db()->prepare('SELECT message FROM communication_templates WHERE name = ? AND is_active = 1');
+				$template->execute(['new_travel_agency_sms_credentials']);
+				$templateData = $template->fetch();
+				
+				if ($templateData) {
+					$message = $this->processTemplate($templateData['message'], [
+						'site_name' => $siteName,
+						'email' => $email,
+						'password' => $password,
+						'login_url' => $loginUrl
+					]);
+				} else {
+					// Fallback to hardcoded message
+					$message = "Welcome to {$siteName}! Your travel agency account is ready. Email: {$email}, Password: {$password}. Login: {$loginUrl}";
+				}
+				
+				$sms = new \App\Services\Sms();
+				if ($sms->isConfigured()) {
+					$sms->send($phone, $message);
+				}
+			} catch (\Throwable $e) {
+				// Log error but don't fail the account creation
+			}
+		}
+	}
+
+	public function travelAgencyShow(): void
+    {
+        require_admin();
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            redirect(base_url('/admin/travel/agencies'));
+            return;
+        }
+
+        // Get agency details
+        $stmt = db()->prepare('SELECT * FROM travel_agencies WHERE id = ?');
+        $stmt->execute([$id]);
+        $agency = $stmt->fetch();
+        
+        if (!$agency) {
+            flash_set('error', 'Travel agency not found.');
+            redirect(base_url('/admin/travel/agencies'));
+            return;
+        }
+
+        // Get agency destinations
+        $destinations = db()->prepare('SELECT * FROM travel_destinations WHERE agency_id = ? ORDER BY created_at DESC');
+        $destinations->execute([$id]);
+        $destinations = $destinations->fetchAll();
+
+        // Get agency bookings summary
+        $bookingsSummary = db()->prepare('
+            SELECT 
+                COUNT(*) as total_bookings,
+                COALESCE(SUM(CASE WHEN tp.payment_status = "paid" THEN tb.total_amount ELSE 0 END), 0) as total_revenue,
+                COALESCE(SUM(CASE WHEN tp.payment_status = "paid" THEN 1 ELSE 0 END), 0) as paid_bookings
+            FROM travel_bookings tb 
+            LEFT JOIN travel_payments tp ON tp.booking_id = tb.id 
+            WHERE tb.destination_id IN (SELECT id FROM travel_destinations WHERE agency_id = ?)
+        ');
+        $bookingsSummary->execute([$id]);
+        $summary = $bookingsSummary->fetch();
+
+        // Get agency withdrawals
+        $withdrawals = db()->prepare('
+            SELECT w.*, td.title as destination_title 
+            FROM withdrawals w 
+            LEFT JOIN travel_destinations td ON td.id = w.destination_id 
+            WHERE w.travel_agency_id = ? 
+            ORDER BY w.created_at DESC
+        ');
+        $withdrawals->execute([$id]);
+        $withdrawals = $withdrawals->fetchAll();
+
+        view('admin/travel_agency_show', compact('agency', 'destinations', 'summary', 'withdrawals'));
+    }
+
     public function travelDestinations(): void
     {
         require_admin();
@@ -542,6 +1162,14 @@ class AdminController
         // Site settings
         Setting::set('site.name', trim($_POST['site_name'] ?? 'Ticko'));
         Setting::set('site.description', trim($_POST['site_description'] ?? ''));
+        
+        // Contact information
+        Setting::set('site.phone', trim($_POST['site_phone'] ?? '+254 700 000 000'));
+        Setting::set('site.email', trim($_POST['site_email'] ?? 'info@example.com'));
+        Setting::set('site.address', trim($_POST['site_address'] ?? 'Nairobi, Kenya'));
+        Setting::set('site.facebook', trim($_POST['site_facebook'] ?? ''));
+        Setting::set('site.twitter', trim($_POST['site_twitter'] ?? ''));
+        Setting::set('site.instagram', trim($_POST['site_instagram'] ?? ''));
         // Handle logo & favicon uploads
         if (!empty($_FILES['site_logo']['tmp_name'])) {
             $ext = pathinfo($_FILES['site_logo']['name'], PATHINFO_EXTENSION);
@@ -775,29 +1403,71 @@ class AdminController
         require_admin();
         $id = (int)($_POST['id'] ?? 0);
         $status = trim($_POST['status'] ?? 'requested');
+        $adminNotes = trim($_POST['admin_notes'] ?? '');
+        
         if ($id > 0) {
-            db()->prepare('UPDATE withdrawals SET status = ?, updated_at = CASE WHEN ? IN ("approved","paid","rejected") THEN NOW() ELSE updated_at END WHERE id = ?')
-              ->execute([$status, $status, $id]);
-            // send SMS to organizer or travel agency
             try {
-                $row = db()->prepare('SELECT w.amount, o.phone as organizer_phone, ta.phone as agency_phone FROM withdrawals w LEFT JOIN organizers o ON o.id = w.organizer_id LEFT JOIN travel_agencies ta ON ta.id = w.travel_agency_id WHERE w.id = ?');
-                $row->execute([$id]);
-                $data = $row->fetch();
-                $phone = $data['organizer_phone'] ?? $data['agency_phone'] ?? '';
-                if ($phone) {
-                    $sms = new \App\Services\Sms();
-                    if ($sms->isConfigured()) {
-                        $tplKey = 'withdrawal_' . $status; // e.g., withdrawal_approved
-                        $body = \App\Services\SmsTemplates::render($tplKey, [
-                            'amount' => number_format((float)($data['amount'] ?? 0), 2),
-                            'status' => $status,
-                        ]);
-                        if ($body === '') { $body = 'Withdrawal ' . $status . ' for KES ' . number_format((float)($data['amount'] ?? 0), 2); }
-                        $sms->send($phone, $body);
+                // Update withdrawal status
+                db()->prepare('UPDATE withdrawals SET status = ?, admin_notes = ?, updated_at = CASE WHEN ? IN ("approved","paid","rejected") THEN NOW() ELSE updated_at END WHERE id = ?')
+                  ->execute([$status, $adminNotes, $status, $id]);
+                
+                // Send SMS to organizer or travel agency
+                try {
+                    $row = db()->prepare('SELECT w.amount, o.phone as organizer_phone, ta.phone as agency_phone FROM withdrawals w LEFT JOIN organizers o ON o.id = w.organizer_id LEFT JOIN travel_agencies ta ON ta.id = w.travel_agency_id WHERE w.id = ?');
+                    $row->execute([$id]);
+                    $data = $row->fetch();
+                    $phone = $data['organizer_phone'] ?? $data['agency_phone'] ?? '';
+                    if ($phone) {
+                        $sms = new \App\Services\Sms();
+                        if ($sms->isConfigured()) {
+                            $tplKey = 'withdrawal_' . $status; // e.g., withdrawal_approved
+                            $body = \App\Services\SmsTemplates::render($tplKey, [
+                                'amount' => number_format((float)($data['amount'] ?? 0), 2),
+                                'status' => $status,
+                            ]);
+                            if ($body === '') { $body = 'Withdrawal ' . $status . ' for KES ' . number_format((float)($data['amount'] ?? 0), 2); }
+                            $sms->send($phone, $body);
+                        }
                     }
+                } catch (\Throwable $e) {
+                    // SMS error - don't fail the request
                 }
-            } catch (\Throwable $e) {}
+                
+                // Check if this is an AJAX request (from modal)
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Withdrawal status updated successfully',
+                        'status' => $status
+                    ]);
+                    exit;
+                }
+                
+                flash_set('success', 'Withdrawal status updated successfully');
+            } catch (\Throwable $e) {
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to update withdrawal status: ' . $e->getMessage()
+                    ]);
+                    exit;
+                }
+                flash_set('error', 'Failed to update withdrawal status');
+            }
+        } else {
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Invalid withdrawal ID'
+                ]);
+                exit;
+            }
+            flash_set('error', 'Invalid withdrawal ID');
         }
+        
         redirect(base_url('/admin/withdrawals'));
     }
 
@@ -1206,6 +1876,458 @@ class AdminController
         
         redirect('/admin/hotels/show?id=' . $id);
     }
-}
 
+	public function marketing(): void
+	{
+		require_admin();
+		
+		// Get marketing statistics
+		$marketingStats = [
+			'pending_requests' => 0,
+			'approved_campaigns' => 0,
+			'active_campaigns' => 0,
+			'total_revenue' => 0.00
+		];
+		
+		// Get campaign requests
+		$campaignRequests = [];
+		
+		// Get packages
+		$packages = [];
+		
+		view('admin/marketing', compact('marketingStats', 'campaignRequests', 'packages'));
+	}
+
+	public function marketingPricingApi(): void
+	{
+		header('Content-Type: application/json');
+		
+		try {
+			$tier = $_GET['tier'] ?? '';
+			$accountType = $_GET['account_type'] ?? '';
+			
+			if (empty($tier) || empty($accountType)) {
+				echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+				return;
+			}
+
+
+			
+			$stmt = db()->prepare('SELECT price_per_sms, max_messages, features FROM marketing_pricing_settings WHERE tier_name = ? AND account_type = ? AND is_active = 1');
+			$stmt->execute([$tier, $accountType]);
+			$pricing = $stmt->fetch();
+			
+			if ($pricing) {
+				echo json_encode([
+					'success' => true,
+					'pricing' => $pricing
+				]);
+			} else {
+				echo json_encode([
+					'success' => false,
+					'message' => 'Pricing not found'
+				]);
+			}
+			
+		} catch (Exception $e) {
+			echo json_encode([
+				'success' => false,
+				'message' => 'Error fetching pricing: ' . $e->getMessage()
+			]);
+		}
+	}
+
+	public function marketingCampaignsApi(): void
+	{
+		require_admin();
+		header('Content-Type: application/json');
+		
+		try {
+			if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+				$campaignId = $_GET['id'] ?? null;
+				
+				if ($campaignId) {
+					// Get single campaign
+					$stmt = db()->prepare('
+						SELECT mcr.*, 
+						       CASE 
+						           WHEN mcr.account_type = "organizer" THEN o.full_name
+						           WHEN mcr.account_type = "travel_agency" THEN ta.company_name
+						       END as account_name
+						FROM marketing_campaign_requests mcr
+						LEFT JOIN organizers o ON mcr.account_type = "organizer" AND mcr.account_id = o.id
+						LEFT JOIN travel_agencies ta ON mcr.account_type = "travel_agency" AND mcr.account_id = ta.id
+						WHERE mcr.id = ?
+					');
+					$stmt->execute([$campaignId]);
+					$campaign = $stmt->fetch();
+					
+					if ($campaign) {
+						echo json_encode(['success' => true, 'campaign' => $campaign]);
+					} else {
+						echo json_encode(['success' => false, 'message' => 'Campaign not found']);
+					}
+				} else {
+					// Get all campaigns
+					$stmt = db()->prepare('
+						SELECT mcr.*, 
+						       CASE 
+						           WHEN mcr.account_type = "organizer" THEN o.full_name
+						           WHEN mcr.account_type = "travel_agency" THEN ta.company_name
+						       END as account_name
+						FROM marketing_campaign_requests mcr
+						LEFT JOIN organizers o ON mcr.account_type = "organizer" AND mcr.account_id = o.id
+						LEFT JOIN travel_agencies ta ON mcr.account_type = "travel_agency" AND mcr.account_id = ta.id
+						ORDER BY mcr.created_at DESC
+					');
+					$stmt->execute();
+					$campaigns = $stmt->fetchAll();
+					
+					echo json_encode(['success' => true, 'campaigns' => $campaigns]);
+				}
+			}
+			
+		} catch (Exception $e) {
+			echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+		}
+	}
+
+	public function marketingCampaignsUpdateStatusApi(): void
+	{
+		require_admin();
+		header('Content-Type: application/json');
+		
+		try {
+			$input = json_decode(file_get_contents('php://input'), true);
+			$campaignId = $input['campaign_id'] ?? null;
+			$status = $input['status'] ?? null;
+			
+			if (!$campaignId || !$status) {
+				echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+				return;
+			}
+			
+			$stmt = db()->prepare('
+				UPDATE marketing_campaign_requests 
+				SET status = ?, approved_by = ?, approved_at = NOW() 
+				WHERE id = ?
+			');
+			$stmt->execute([$status, $_SESSION['admin_id'], $campaignId]);
+			
+			echo json_encode(['success' => true, 'message' => 'Campaign status updated']);
+			
+		} catch (Exception $e) {
+			echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+		}
+	}
+
+	public function marketingStatsApi(): void
+	{
+		require_admin();
+		header('Content-Type: application/json');
+		
+		try {
+			$stats = [];
+			
+			// Pending requests
+			$stmt = db()->prepare('SELECT COUNT(*) as count FROM marketing_campaign_requests WHERE status = "pending"');
+			$stmt->execute();
+			$stats['pending'] = $stmt->fetch()['count'];
+			
+			// Approved requests
+			$stmt = db()->prepare('SELECT COUNT(*) as count FROM marketing_campaign_requests WHERE status = "approved"');
+			$stmt->execute();
+			$stats['approved'] = $stmt->fetch()['count'];
+			
+			// Active campaigns
+			$stmt = db()->prepare('SELECT COUNT(*) as count FROM marketing_campaign_requests WHERE status = "running"');
+			$stmt->execute();
+			$stats['active'] = $stmt->fetch()['count'];
+			
+			// Total revenue
+			$stmt = db()->prepare('SELECT SUM(calculated_cost) as total FROM marketing_campaign_requests WHERE payment_status = "paid"');
+			$stmt->execute();
+			$stats['total_revenue'] = $stmt->fetch()['total'] ?? 0;
+			
+			echo json_encode(['success' => true, 'stats' => $stats]);
+			
+		} catch (Exception $e) {
+			echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+		}
+	}
+
+	public function marketingPackagesApi(): void
+	{
+        require_admin();
+        // Ensure clean JSON responses (avoid stray output)
+        while (function_exists('ob_get_level') && ob_get_level() > 0) { @ob_end_clean(); }
+        header('Content-Type: application/json');
+		
+		try {
+			if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+				$packageId = $_GET['id'] ?? null;
+				
+				if ($packageId) {
+					// Get single package
+					$stmt = db()->prepare('SELECT * FROM marketing_pricing_settings WHERE id = ?');
+					$stmt->execute([$packageId]);
+					$package = $stmt->fetch();
+					
+                    if ($package) {
+                        echo json_encode(['success' => true, 'package' => $package]);
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Package not found']);
+                    }
+				} else {
+					// Get all packages
+					$stmt = db()->prepare('SELECT * FROM marketing_pricing_settings ORDER BY account_type, tier_name');
+					$stmt->execute();
+					$packages = $stmt->fetchAll();
+					
+					echo json_encode(['success' => true, 'packages' => $packages]);
+				}
+			} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+				// Create new package
+                $input = json_decode(file_get_contents('php://input'), true);
+                // Normalize inputs
+                $tierName = trim($input['tier_name'] ?? '');
+                $accountType = ($input['account_type'] ?? '') === 'travel_agency' ? 'travel_agency' : 'organizer';
+                $pricePerSms = (float)($input['price_per_sms'] ?? 0);
+                $maxMessages = (int)($input['max_messages'] ?? 0);
+                $features = trim($input['features'] ?? '');
+                if ($features === '') { $features = '[]'; }
+                // Validate JSON
+                $decoded = json_decode($features, true);
+                if (!is_array($decoded)) { $features = '[]'; }
+                $isActive = !empty($input['is_active']) ? 1 : 0;
+
+                $stmt = db()->prepare('
+                    INSERT INTO marketing_pricing_settings 
+                    (tier_name, account_type, price_per_sms, max_messages, features, is_active, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ');
+                
+                $stmt->execute([
+                    $tierName,
+                    $accountType,
+                    $pricePerSms,
+                    $maxMessages,
+                    $features,
+                    $isActive
+                ]);
+				
+                echo json_encode(['success' => true, 'message' => 'Package created successfully']);
+                return;
+				
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+				// Update package
+                $input = json_decode(file_get_contents('php://input'), true);
+                $packageId = $input['package_id'] ?? null;
+				
+				if (!$packageId) {
+					echo json_encode(['success' => false, 'message' => 'Package ID required']);
+					return;
+				}
+                // Normalize
+                $tierName = trim($input['tier_name'] ?? '');
+                $accountType = ($input['account_type'] ?? '') === 'travel_agency' ? 'travel_agency' : 'organizer';
+                $pricePerSms = (float)($input['price_per_sms'] ?? 0);
+                $maxMessages = (int)($input['max_messages'] ?? 0);
+                $features = trim($input['features'] ?? '');
+                if ($features === '') { $features = '[]'; }
+                $decoded = json_decode($features, true);
+                if (!is_array($decoded)) { $features = '[]'; }
+                $isActive = !empty($input['is_active']) ? 1 : 0;
+
+				$stmt = db()->prepare('
+					UPDATE marketing_pricing_settings 
+					SET tier_name = ?, account_type = ?, price_per_sms = ?, max_messages = ?, 
+					    features = ?, is_active = ?, updated_at = NOW()
+					WHERE id = ?
+				');
+				
+				$stmt->execute([
+                    $tierName,
+                    $accountType,
+                    $pricePerSms,
+                    $maxMessages,
+                    $features,
+                    $isActive,
+					$packageId
+				]);
+				
+                echo json_encode(['success' => true, 'message' => 'Package updated successfully']);
+                return;
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                // Delete package
+                $input = json_decode(file_get_contents('php://input'), true);
+                $packageId = $input['package_id'] ?? null;
+                if (!$packageId) {
+                    echo json_encode(['success' => false, 'message' => 'Package ID required']);
+                    return;
+                }
+                $stmt = db()->prepare('DELETE FROM marketing_pricing_settings WHERE id = ?');
+                $stmt->execute([$packageId]);
+                echo json_encode(['success' => true, 'message' => 'Package deleted successfully']);
+                return;
+			}
+			
+		} catch (Exception $e) {
+			echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+		}
+	}
+    // Public: list active packages for a given account type (organizer|travel_agency)
+    public function marketingPublicPackagesApi(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $accountType = $_GET['account_type'] ?? '';
+            if ($accountType !== 'organizer' && $accountType !== 'travel_agency') {
+                echo json_encode(['success' => false, 'message' => 'Invalid account_type']);
+                return;
+            }
+            $stmt = db()->prepare('SELECT id, tier_name, account_type, price_per_sms, max_messages, features FROM marketing_pricing_settings WHERE account_type = ? AND is_active = 1 ORDER BY price_per_sms ASC, tier_name ASC');
+            $stmt->execute([$accountType]);
+            $packages = $stmt->fetchAll();
+            echo json_encode(['success' => true, 'packages' => $packages]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    // Public: simple unit rates and volume tiers for reach-based orders
+    public function marketingRatesApi(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $accountType = $_GET['account_type'] ?? 'organizer';
+            if ($accountType !== 'organizer' && $accountType !== 'travel_agency') {
+                $accountType = 'organizer';
+            }
+            $sms = (float)Setting::get($accountType.'.marketing.sms_rate', $accountType==='organizer' ? '1.20' : '1.30');
+            $email = (float)Setting::get($accountType.'.marketing.email_rate', '0.15');
+            $tiers = [1000, 5000, 10000, 25000, 50000];
+            echo json_encode(['success'=>true, 'rates'=>['sms'=>$sms,'email'=>$email],'tiers'=>$tiers]);
+        } catch (\Exception $e) {
+            echo json_encode(['success'=>false,'message'=>'Error: '.$e->getMessage()]);
+        }
+    }
+
+    // Admin: list/update marketing orders
+    public function marketingOrdersApi(): void
+    {
+        require_admin();
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+                $stmt = db()->prepare('SELECT * FROM marketing_orders ORDER BY created_at DESC');
+                $stmt->execute();
+                echo json_encode(['success'=>true,'orders'=>$stmt->fetchAll()]);
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $input = json_decode(file_get_contents('php://input'), true);
+                $orderId = (int)($input['order_id'] ?? 0);
+                $status = $input['status'] ?? '';
+                if ($orderId<=0 || $status==='') { echo json_encode(['success'=>false,'message'=>'Invalid request']); return; }
+
+                // Fetch order row
+                $ordStmt = db()->prepare('SELECT * FROM marketing_orders WHERE id = ?');
+                $ordStmt->execute([$orderId]);
+                $order = $ordStmt->fetch();
+                if (!$order) { echo json_encode(['success'=>false,'message'=>'Order not found']); return; }
+
+                // When admin approves or starts running, create a campaign record (if not exists) and trigger delivery
+                $createdCampaignId = null;
+                $logMsgs = [];
+                if (in_array($status, ['approved','running'], true)) {
+                    try {
+                        // Check for existing linked campaign by looking for a reference in last_log JSON
+                        $existingId = null;
+                        if (!empty($order['last_log'])) {
+                            $decoded = json_decode($order['last_log'], true);
+                            if (is_array($decoded) && !empty($decoded['campaign_id'])) { $existingId = (int)$decoded['campaign_id']; }
+                        }
+
+                        if (!$existingId) {
+                            // Build default content from the item
+                            $smsContent = '';
+                            $emailContent = '';
+                            if (($order['item_type'] ?? '') === 'event') {
+                                $ev = db()->prepare('SELECT id, title FROM events WHERE id = ?');
+                                $ev->execute([(int)$order['item_id']]);
+                                $event = $ev->fetch();
+                                $title = $event['title'] ?? 'your event';
+                                $link = base_url('/events/show?id=' . (int)$order['item_id']);
+                                $smsContent = 'Quick Boost: ' . $title . ' - Get tickets: ' . $link;
+                                $emailContent = 'Quick Boost for <strong>' . htmlspecialchars($title) . '</strong>. Grab tickets now: ' . $link;
+                            } elseif (($order['item_type'] ?? '') === 'destination') {
+                                $link = base_url('/travel/destination?id=' . (int)$order['item_id']);
+                                $smsContent = 'Quick Boost: New travel deal! View: ' . $link;
+                                $emailContent = 'Quick Boost: New travel deal is live. View details: ' . $link;
+                            }
+
+                            // Audience type from order log if present
+                            $audType = 'recommend';
+                            if (!empty($order['last_log'])) { $j = json_decode($order['last_log'], true); if (is_array($j) && !empty($j['audience_type'])) { $audType = $j['audience_type']; } }
+
+                            // Insert campaign row (minimal fields to work with DeliveryService)
+                            $ins = db()->prepare('INSERT INTO marketing_campaigns (name, description, campaign_type, organizer_id, travel_agency_id, target_audience, message_content, sms_content, email_content, budget, scheduled_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())');
+                            $name = 'QB Order #' . $orderId;
+                            $desc = 'Auto-created from marketing_order #' . $orderId;
+                            $ctype = ($order['item_type'] ?? 'event');
+                            $organizerId = ($order['account_type'] ?? '') === 'organizer' ? (int)$order['account_id'] : null;
+                            $agencyId = ($order['account_type'] ?? '') === 'travel_agency' ? (int)$order['account_id'] : null;
+                            $targetJson = json_encode(['quick_boost'=>true,'source_order_id'=>$orderId,'item_type'=>$order['item_type'],'item_id'=>(int)$order['item_id'],'audience_type'=>$audType]);
+                            $budget = (float)($order['total_cost'] ?? 0);
+                            $statusForCampaign = 'approved'; // allow startCampaign
+                            $ins->execute([$name, $desc, $ctype, $organizerId, $agencyId, $targetJson, $smsContent, $smsContent, $emailContent, $budget, $statusForCampaign]);
+                            $createdCampaignId = (int)db()->lastInsertId();
+                            $logMsgs[] = 'Campaign created: ' . $createdCampaignId;
+
+                            // Persist mapping inside last_log JSON (non-breaking)
+                            $newLog = ['campaign_id'=>$createdCampaignId, 'created_at'=>date('c')];
+                            $logJson = json_encode($newLog);
+                            db()->prepare('UPDATE marketing_orders SET last_log = ? WHERE id = ?')->execute([$logJson, $orderId]);
+                        } else {
+                            $createdCampaignId = $existingId;
+                            $logMsgs[] = 'Using existing campaign: ' . $existingId;
+                        }
+
+                        // If requested to run, trigger delivery engine
+                        if ($createdCampaignId && $status === 'running') {
+                            require_once __DIR__ . '/../../marketing/app/Services/DeliveryService.php';
+                            $delivery = new \App\Services\DeliveryService();
+                            $ok = $delivery->startCampaign($createdCampaignId);
+                            $logMsgs[] = 'Delivery ' . ($ok ? 'started' : 'failed to start');
+                        }
+                    } catch (\Throwable $e) {
+                        echo json_encode(['success'=>false,'message'=>'Failed to instantiate campaign: '.$e->getMessage()]);
+                        return;
+                    }
+                }
+
+                // Update order status
+                $stmt = db()->prepare('UPDATE marketing_orders SET status = ?, updated_at = NOW() WHERE id = ?');
+                $stmt->execute([$status,$orderId]);
+                echo json_encode(['success'=>true,'message'=>'Order updated','campaign_id'=>$createdCampaignId,'log'=>$logMsgs]);
+            }
+        } catch (\Exception $e) {
+            echo json_encode(['success'=>false,'message'=>'Error: '.$e->getMessage()]);
+        }
+    }
+
+    // Admin order detail page
+    public function marketingOrderShow(): void
+    {
+        require_admin();
+        $orderId = (int)($_GET['id'] ?? 0);
+        if ($orderId <= 0) { echo 'Invalid order id'; return; }
+        $stmt = db()->prepare('SELECT * FROM marketing_orders WHERE id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) { echo 'Order not found'; return; }
+        view('admin/marketing_order', compact('order'));
+    }
+
+    // end of class
+}
 

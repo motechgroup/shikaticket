@@ -40,10 +40,17 @@ $pageTitle = 'Travel Agency Login';
                 </button>
             </div>
 
-            <div class="text-center">
-                <a href="<?php echo base_url('/travel/register'); ?>" class="text-sm text-red-400 hover:text-red-300">
-                    Don't have an account? Register your travel agency
-                </a>
+            <div class="text-center space-y-2">
+                <div>
+                    <a href="<?php echo base_url('/password-reset?type=travel'); ?>" class="text-sm text-red-400 hover:text-red-300">
+                        Forgot Password?
+                    </a>
+                </div>
+                <div>
+                    <a href="<?php echo base_url('/travel/register'); ?>" class="text-sm text-red-400 hover:text-red-300">
+                        Don't have an account? Register your travel agency
+                    </a>
+                </div>
             </div>
 
             <div class="text-center">

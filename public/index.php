@@ -34,6 +34,7 @@ $router->get('/', 'HomeController@index');
 $router->get('/events', 'EventController@publicIndex');
 $router->get('/events/show', 'EventController@show');
 $router->get('/page', 'PagesController@show');
+$router->get('/search', 'PagesController@search');
 $router->get('/partners', 'PartnersController@index');
 $router->post('/partners', 'PartnersController@store');
 $router->get('/hotels', 'PagesController@hotelsComingSoon');
@@ -69,6 +70,12 @@ $router->get('/password/reset', 'AuthController@resetPasswordForm');
 $router->post('/password/reset', 'AuthController@resetPassword');
 $router->get('/email/verify', 'AuthController@verifyEmail');
 $router->get('/logout', 'AuthController@logout');
+
+// Universal Password Reset Routes (for all user types)
+$router->get('/password-reset', 'PasswordResetController@showResetRequest');
+$router->post('/password-reset/request', 'PasswordResetController@processResetRequest');
+$router->get('/password-reset/verify', 'PasswordResetController@showResetVerify');
+$router->post('/password-reset/verify', 'PasswordResetController@processResetVerify');
 $router->get('/user/dashboard', 'UserController@dashboard');
 $router->get('/user/orders', 'UserController@orders');
 $router->get('/user/account', 'UserController@account');
@@ -103,6 +110,7 @@ $router->get('/organizer/profile', 'OrganizerController@profile');
 $router->post('/organizer/profile', 'OrganizerController@profileSave');
 $router->post('/organizer/profile/verify-phone', 'OrganizerController@startPhoneVerify');
 $router->post('/organizer/profile/verify-phone/confirm', 'OrganizerController@confirmPhoneVerify');
+$router->post('/organizer/profile/payment-info', 'OrganizerController@savePaymentInfo');
 $router->get('/organizer/scanner-devices', 'OrganizerController@scannerDevices');
 $router->post('/organizer/scanner-devices', 'OrganizerController@createScannerDevice');
 $router->post('/organizer/scanner-devices/update', 'OrganizerController@updateScannerDevice');
@@ -118,8 +126,9 @@ $router->post('/admin/login', 'AdminController@login');
 $router->get('/admin/organizers', 'AdminController@organizers');
 $router->post('/admin/organizers/approve', 'AdminController@approveOrganizer');
 $router->post('/admin/organizers/commission', 'AdminController@setOrganizerCommission');
-$router->post('/admin/organizers/toggle', 'AdminController@toggleOrganizer');
 $router->post('/admin/organizers/delete', 'AdminController@deleteOrganizer');
+$router->post('/admin/organizers/verify-payment', 'AdminController@verifyOrganizerPayment');
+$router->post('/admin/organizers/toggle', 'AdminController@toggleOrganizer');
 $router->get('/admin/organizers/create', 'AdminController@organizerEdit');
 $router->get('/admin/organizers/edit', 'AdminController@organizerEdit');
 $router->post('/admin/organizers/save', 'AdminController@organizerSave');
@@ -157,9 +166,12 @@ $router->post('/admin/events/feature', 'AdminController@eventFeature');
 $router->post('/admin/events/delete', 'AdminController@eventDelete');
 // Admin — Travel module
 $router->get('/admin/travel/agencies', 'AdminController@travelAgencies');
+$router->get('/admin/travel/agencies/show', 'AdminController@travelAgencyShow');
 $router->post('/admin/travel/agencies/approve', 'AdminController@approveTravelAgency');
 $router->post('/admin/travel/agencies/verify-phone', 'AdminController@verifyTravelAgencyPhone');
 $router->post('/admin/travel/agencies/commission', 'AdminController@setTravelAgencyCommission');
+$router->post('/admin/travel/agencies/verify-payment', 'AdminController@verifyTravelAgencyPayment');
+$router->post('/admin/travel/agencies/toggle', 'AdminController@toggleTravelAgency');
 $router->get('/admin/travel/destinations', 'AdminController@travelDestinations');
 $router->get('/admin/settings', 'AdminController@settings');
 $router->post('/admin/settings', 'AdminController@saveSettings');
@@ -167,6 +179,10 @@ $router->post('/admin/settings/test-email', 'AdminController@sendTestEmail');
 $router->post('/admin/settings/restore-mpesa', 'AdminController@restoreMpesaFromEnv');
 $router->get('/admin/profile', 'AdminController@profile');
 $router->post('/admin/profile', 'AdminController@profileSave');
+$router->get('/admin/accounts/create', 'AdminController@createAccounts');
+$router->post('/admin/accounts/create-user', 'AdminController@createUser');
+$router->post('/admin/accounts/create-organizer', 'AdminController@createOrganizer');
+$router->post('/admin/accounts/create-travel', 'AdminController@createTravelAgency');
 $router->get('/admin/email-templates', 'AdminController@emailTemplates');
 $router->post('/admin/email-templates', 'AdminController@saveEmailTemplates');
 $router->get('/admin/sms-templates', 'AdminController@smsTemplates');
@@ -193,6 +209,63 @@ $router->get('/admin/scans', 'AdminController@scans');
 // Admin scanner assignments removed - organizers manage their own devices
 $router->get('/admin/withdrawals', 'AdminController@withdrawalsIndex');
 $router->post('/admin/withdrawals/update', 'AdminController@withdrawalsUpdate');
+
+// Featured Content Management
+$router->get('/admin/featured-content', 'FeaturedContentController@index');
+$router->post('/admin/featured-content/feature-event', 'FeaturedContentController@featureEvent');
+$router->post('/admin/featured-content/unfeature-event', 'FeaturedContentController@unfeatureEvent');
+$router->post('/admin/featured-content/feature-destination', 'FeaturedContentController@featureDestination');
+$router->post('/admin/featured-content/unfeature-destination', 'FeaturedContentController@unfeatureDestination');
+$router->post('/admin/featured-content/update-commission-settings', 'FeaturedContentController@updateCommissionSettings');
+
+// Finance Module
+$router->get('/admin/finance', 'FinanceController@adminDashboard');
+$router->get('/travel/finance', 'FinanceController@travelDashboard');
+$router->get('/travel/marketing', 'DisabledController@notFound');
+$router->get('/travel/campaign-reports', 'DisabledController@notFound');
+$router->post('/travel/campaign-request', 'DisabledController@notFound');
+$router->get('/travel/destinations/api', 'TravelController@destinationsApi');
+$router->post('/travel/marketing-order', 'TravelController@marketingOrder');
+$router->get('/organizer/finance', 'FinanceController@organizerDashboard');
+$router->get('/organizer/marketing', 'DisabledController@notFound');
+$router->get('/organizer/campaign-reports', 'DisabledController@notFound');
+$router->get('/organizer/campaign/details', 'DisabledController@notFound');
+$router->post('/organizer/campaign-request', 'DisabledController@notFound');
+$router->get('/organizer/events/api', 'OrganizerController@eventsApi');
+$router->post('/organizer/marketing-order', 'OrganizerController@marketingOrder');
+$router->get('/finance/export', 'FinanceController@exportReport');
+
+        // Feature Requests
+        $router->post('/organizer/events/request-feature', 'FeatureRequestController@requestFeatureEvent');
+        $router->post('/travel/destinations/request-feature', 'FeatureRequestController@requestFeatureDestination');
+        $router->post('/admin/featured-content/approve-request', 'FeatureRequestController@approveRequest');
+        $router->post('/admin/featured-content/reject-request', 'FeatureRequestController@rejectRequest');
+        
+        // Notification Templates Management
+        $router->get('/admin/notification-templates', 'NotificationTemplateController@index');
+        $router->post('/admin/notification-templates/update', 'NotificationTemplateController@update');
+        $router->get('/admin/notification-templates/preview', 'NotificationTemplateController@preview');
+
+		// Marketing Management (disabled)
+		$router->get('/admin/marketing', 'DisabledController@notFound');
+		$router->get('/admin/marketing/orders/show', 'DisabledController@notFound');
+		$router->get('/api/marketing-pricing', 'DisabledController@notFound');
+		
+		// Marketing API Routes (disabled)
+		$router->get('/api/admin/marketing/campaigns', 'DisabledController@notFound');
+		$router->get('/api/admin/marketing/campaigns/{id}', 'DisabledController@notFound');
+		$router->post('/api/admin/marketing/campaigns/update-status', 'DisabledController@notFound');
+		$router->get('/api/admin/marketing/stats', 'DisabledController@notFound');
+		$router->get('/api/admin/marketing/packages', 'DisabledController@notFound');
+		$router->post('/api/admin/marketing/packages', 'DisabledController@notFound');
+		$router->get('/api/admin/marketing/packages/{id}', 'DisabledController@notFound');
+		$router->put('/api/admin/marketing/packages/{id}', 'DisabledController@notFound');
+		$router->put('/api/admin/marketing/packages', 'DisabledController@notFound');
+		$router->delete('/api/admin/marketing/packages', 'DisabledController@notFound');
+		$router->get('/api/marketing/packages', 'DisabledController@notFound');
+		$router->get('/api/marketing/rates', 'DisabledController@notFound');
+		$router->get('/api/admin/marketing/orders', 'DisabledController@notFound');
+		$router->post('/api/admin/marketing/orders/update-status', 'DisabledController@notFound');
 
 // Payments
 $router->get('/pay/mpesa', 'PaymentController@mpesa');
@@ -228,6 +301,10 @@ $router->get('/travel/scanner/create', 'TravelController@createScanner');
 $router->post('/travel/scanner/create', 'TravelController@createScanner');
 $router->post('/travel/scanner/delete', 'TravelController@deleteScanner');
 $router->post('/travel/scanner/toggle', 'TravelController@toggleScanner');
+$router->get('/travel/scanner/scan', 'TravelController@scannerScan');
+$router->post('/travel/scanner/verify', 'TravelController@scannerVerify');
+$router->get('/travel/scanner/edit', 'TravelController@editScanner');
+$router->post('/travel/scanner/edit', 'TravelController@updateScanner');
 
 $router->get('/travel/dashboard', 'TravelController@dashboard');
 $router->get('/travel/destinations', 'TravelController@destinations');
@@ -235,6 +312,7 @@ $router->get('/travel/destinations/create', 'TravelController@destinationCreate'
 $router->post('/travel/destinations/create', 'TravelController@destinationCreate');
 $router->get('/travel/destinations/edit', 'TravelController@destinationEdit');
 $router->post('/travel/destinations/edit', 'TravelController@destinationEdit');
+$router->post('/travel/destinations/request-feature', 'FeatureRequestController@requestFeatureDestination');
 $router->get('/travel/withdrawals', 'TravelController@withdrawals');
 $router->post('/travel/withdrawals/request', 'TravelController@requestWithdrawal');
 $router->get('/travel/bookings', 'TravelController@bookings');
@@ -242,6 +320,27 @@ $router->get('/travel/profile', 'TravelController@profile');
 $router->post('/travel/profile', 'TravelController@profile');
 $router->post('/travel/profile/verify-phone', 'TravelController@startPhoneVerify');
 $router->post('/travel/profile/verify-phone/confirm', 'TravelController@confirmPhoneVerify');
+$router->post('/travel/profile/payment-info', 'TravelController@savePaymentInfo');
+
+// Marketing Module Routes
+$router->get('/marketing', 'DisabledController@notFound');
+$router->get('/marketing/dashboard', 'DisabledController@notFound');
+$router->get('/marketing/campaigns', 'DisabledController@notFound');
+$router->get('/marketing/campaigns/create', 'DisabledController@notFound');
+$router->post('/marketing/campaigns/create', 'DisabledController@notFound');
+$router->get('/marketing/campaigns/analytics', 'DisabledController@notFound');
+$router->get('/marketing/segmentation', 'DisabledController@notFound');
+$router->get('/marketing/templates', 'DisabledController@notFound');
+$router->get('/marketing/reports', 'DisabledController@notFound');
+$router->get('/marketing/requests/organizers', 'DisabledController@notFound');
+$router->get('/marketing/requests/agencies', 'DisabledController@notFound');
+
+// Marketing AJAX Endpoints
+$router->get('/marketing/api/audience-preview', 'DisabledController@notFound');
+$router->post('/marketing/api/campaign/approve', 'DisabledController@notFound');
+$router->post('/marketing/api/campaign/start', 'DisabledController@notFound');
+// Campaign recipients API for admin UI selection
+$router->get('/marketing/api/campaign/recipients', 'DisabledController@notFound');
 
 // Dispatch
 $requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

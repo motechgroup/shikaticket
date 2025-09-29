@@ -47,6 +47,11 @@ class CheckoutController
 
 			$stmt = $pdo->prepare('INSERT INTO order_items (order_id, event_id, quantity, unit_price, tier) VALUES (?, ?, ?, ?, ?)');
 			$stmt->execute([$orderId, $eventId, $quantity, $unit, $tier]);
+			
+			// Calculate and record featured commission if applicable
+			require_once __DIR__ . '/FeaturedContentController.php';
+			$baseCommission = 0; // Base commission is handled elsewhere
+			FeaturedContentController::recordFeaturedCommission('event', $eventId, null, $orderId, null, null, $total, $currency, $baseCommission);
 			$pdo->commit();
 		} catch (\Throwable $e) {
 			$pdo->rollBack();

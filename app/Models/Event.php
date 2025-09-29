@@ -5,7 +5,8 @@ class Event
 {
 	public static function featured(int $limit = 6): array
 	{
-		$stmt = db()->prepare('SELECT * FROM events WHERE is_featured = 1 AND is_published = 1 ORDER BY created_at DESC LIMIT ?');
+		// Only show featured events that haven't expired yet
+		$stmt = db()->prepare('SELECT * FROM events WHERE is_featured = 1 AND is_published = 1 AND (event_date > CURDATE() OR (event_date = CURDATE() AND event_time > CURTIME())) ORDER BY created_at DESC LIMIT ?');
 		$stmt->bindValue(1, $limit, \PDO::PARAM_INT);
 		$stmt->execute();
 		return $stmt->fetchAll();
@@ -13,7 +14,8 @@ class Event
 
 	public static function available(int $limit = 12): array
 	{
-		$stmt = db()->prepare('SELECT * FROM events WHERE is_published = 1 ORDER BY created_at DESC LIMIT ?');
+		// Only show events that haven't expired yet
+		$stmt = db()->prepare('SELECT * FROM events WHERE is_published = 1 AND (event_date > CURDATE() OR (event_date = CURDATE() AND event_time > CURTIME())) ORDER BY created_at DESC LIMIT ?');
 		$stmt->bindValue(1, $limit, \PDO::PARAM_INT);
 		$stmt->execute();
 		return $stmt->fetchAll();

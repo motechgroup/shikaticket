@@ -139,16 +139,36 @@ class AuthController
 
 	public function loginUser(): void
 	{
+        // Check rate limit
+        if (\App\Services\RateLimitService::isBlocked('login_attempts')) {
+            flash_set('error', 'Too many login attempts. Please try again later.');
+            redirect(base_url('/login'));
+        }
+
         $phone = trim($_POST['phone'] ?? '');
         $password = $_POST['password'] ?? '';
-        if ($phone === '' || $password === '') { redirect(base_url('/login')); }
+        if ($phone === '' || $password === '') { 
+            \App\Services\RateLimitService::recordAttempt('login_attempts');
+            redirect(base_url('/login')); 
+        }
+        
         $user = User::findByPhone($phone);
         if ($user && password_verify($password, $user['password_hash'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = 'user';
+            // Check session timeout
+            if (!\App\Services\SessionSecurityService::checkSessionTimeout()) {
+                flash_set('error', 'Session expired. Please login again.');
+                redirect(base_url('/login'));
+            }
+            
+            // Set secure user session
+            \App\Services\SessionSecurityService::setUserSession($user, 'user');
             redirect(base_url('/user/dashboard'));
         }
-        echo 'Invalid credentials';
+        
+        // Record failed attempt
+        \App\Services\RateLimitService::recordAttempt('login_attempts');
+        flash_set('error', 'Invalid credentials');
+        redirect(base_url('/login'));
 	}
 
 	public function registerUser(): void

@@ -185,7 +185,7 @@
 	</div>
 
 	<!-- System Overview -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+	<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
 		<!-- Pending Withdrawals -->
 		<div class="card p-4">
 			<div class="flex items-center justify-between mb-3">
@@ -295,6 +295,62 @@
 							</div>
 						</div>
 					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</div>
+
+		<!-- Feature Requests -->
+		<div class="card p-4">
+			<div class="flex items-center justify-between mb-3">
+				<h2 class="font-semibold text-sm md:text-base">Feature Requests</h2>
+				<?php if (!empty($featureRequests)): ?>
+					<a href="<?php echo base_url('/admin/featured-content'); ?>" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+						View All →
+					</a>
+				<?php endif; ?>
+			</div>
+			<?php if (empty($featureRequests)): ?>
+				<div class="p-4 md:p-6 text-gray-400 text-sm">No pending feature requests.</div>
+			<?php else: ?>
+				<div class="space-y-2">
+					<?php foreach (array_slice($featureRequests, 0, 3) as $request): ?>
+						<a href="<?php echo base_url('/admin/featured-content'); ?>" class="block p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all duration-200 group">
+							<div class="flex items-center justify-between">
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center gap-2 mb-1">
+										<div class="font-medium text-xs md:text-sm text-white group-hover:text-blue-300 transition-colors">
+											<?php echo htmlspecialchars($request['content_title']); ?>
+										</div>
+										<div class="px-2 py-1 bg-yellow-600/20 text-yellow-300 text-xs rounded-full">
+											<?php echo ucfirst(str_replace('_', ' ', $request['content_type'])); ?>
+										</div>
+									</div>
+									<div class="text-xs text-gray-400">
+										by <?php echo htmlspecialchars($request['requester_name']); ?>
+									</div>
+									<div class="text-xs text-gray-400">
+										<?php echo date('M j, Y H:i', strtotime($request['created_at'])); ?>
+									</div>
+								</div>
+								<div class="text-right">
+									<div class="text-sm font-semibold text-yellow-400">
+										<?php echo $request['requested_commission']; ?>% Commission
+									</div>
+									<div class="text-xs text-gray-400">
+										Click to review
+									</div>
+								</div>
+							</div>
+						</a>
+					<?php endforeach; ?>
+					
+					<?php if (count($featureRequests) > 3): ?>
+						<div class="text-center pt-2">
+							<a href="<?php echo base_url('/admin/featured-content'); ?>" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+								+<?php echo count($featureRequests) - 3; ?> more feature requests →
+							</a>
+						</div>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 		</div>

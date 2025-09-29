@@ -6,6 +6,8 @@ class Router
 	private array $routes = [
 		'GET' => [],
 		'POST' => [],
+		'PUT' => [],
+		'DELETE' => [],
 	];
 
 	public function get(string $path, string $action): void
@@ -16,6 +18,16 @@ class Router
 	public function post(string $path, string $action): void
 	{
 		$this->routes['POST'][$this->normalize($path)] = $action;
+	}
+
+	public function put(string $path, string $action): void
+	{
+		$this->routes['PUT'][$this->normalize($path)] = $action;
+	}
+
+	public function delete(string $path, string $action): void
+	{
+		$this->routes['DELETE'][$this->normalize($path)] = $action;
 	}
 
 	public function dispatch(string $method, string $path): void
@@ -41,8 +53,8 @@ class Router
 			echo 'Action not found';
 			return;
 		}
-        // CSRF check for POST (skip for scanner verification to allow kiosk flows)
-        if ($method === 'POST' && function_exists('verify_csrf')) {
+        // CSRF check for POST and PUT (skip for scanner verification to allow kiosk flows)
+        if (($method === 'POST' || $method === 'PUT') && function_exists('verify_csrf')) {
             if ($path !== '/scanner/verify') {
                 verify_csrf();
             }

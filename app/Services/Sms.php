@@ -25,6 +25,11 @@ class Sms
         $this->txPartnerId = Setting::get('textsms.partner_id', '');
         $this->txShortcode = Setting::get('textsms.shortcode', '');
         $this->txDomain = Setting::get('textsms.domain', 'sms.textsms.co.ke');
+
+        // Auto-select textsms if credentials exist to ensure the integrated gateway is used
+        if ($this->txApiKey !== '' && $this->txPartnerId !== '' && $this->txShortcode !== '') {
+            $this->provider = 'textsms';
+        }
     }
 
     public function isConfigured(): bool
@@ -78,13 +83,24 @@ class Sms
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $payload,
                 CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
             ]);
             $resp = curl_exec($ch);
             if ($resp !== false) {
                 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 if ($code >= 200 && $code < 300) {
                     $json = json_decode($resp, true);
-                    $ok = !isset($json['responses'][0]['respose-code']) || (int)$json['responses'][0]['respose-code'] === 200;
+                    // TextSMS sometimes returns a misspelled key 'respose-code'; handle both
+                    $respCode = null;
+                    if (isset($json['responses'][0]['response-code'])) { $respCode = (int)$json['responses'][0]['response-code']; }
+                    if ($respCode === null && isset($json['responses'][0]['respose-code'])) { $respCode = (int)$json['responses'][0]['respose-code']; }
+                    if ($respCode !== null) {
+                        $ok = ($respCode === 200);
+                    } else {
+                        // Fallback: treat HTTP 2xx as success if payload missing code
+                        $ok = true;
+                    }
                 }
             }
         }

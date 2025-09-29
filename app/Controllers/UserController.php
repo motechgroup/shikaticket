@@ -6,6 +6,61 @@ class UserController
 	public function dashboard(): void
 	{
 		require_user();
+		$userId = (int)$_SESSION['user_id'];
+		
+		// Get user info
+		$stmt = db()->prepare('SELECT first_name, last_name, email, phone, created_at FROM users WHERE id = ?');
+		$stmt->execute([$userId]);
+		$user = $stmt->fetch();
+		
+		// Get user statistics
+		// Total orders
+		$stmt = db()->prepare('SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_spent FROM orders WHERE user_id = ? AND status = "paid"');
+		$stmt->execute([$userId]);
+		$orderStats = $stmt->fetch();
+		
+		// Total tickets
+		$stmt = db()->prepare('
+			SELECT COUNT(t.id) as total_tickets, 
+				   SUM(CASE WHEN t.status = "redeemed" THEN 1 ELSE 0 END) as redeemed_tickets
+			FROM tickets t 
+			JOIN order_items oi ON oi.id = t.order_item_id 
+			JOIN orders o ON o.id = oi.order_id 
+			WHERE o.user_id = ? AND o.status = "paid"
+		');
+		$stmt->execute([$userId]);
+		$ticketStats = $stmt->fetch() ?: ['total_tickets' => 0, 'redeemed_tickets' => 0];
+		
+		// Total travel bookings
+		$stmt = db()->prepare('SELECT COUNT(*) as total_bookings, COALESCE(SUM(total_amount), 0) as total_travel_spent FROM travel_bookings WHERE user_id = ? AND status = "confirmed"');
+		$stmt->execute([$userId]);
+		$travelStats = $stmt->fetch() ?: ['total_bookings' => 0, 'total_travel_spent' => 0];
+		
+		// Recent orders
+		$stmt = db()->prepare('
+			SELECT o.*, e.title as event_title, e.event_date, e.venue
+			FROM orders o 
+			JOIN order_items oi ON oi.order_id = o.id 
+			JOIN events e ON e.id = oi.event_id 
+			WHERE o.user_id = ? AND o.status = "paid"
+			ORDER BY o.created_at DESC 
+			LIMIT 5
+		');
+		$stmt->execute([$userId]);
+		$recentOrders = $stmt->fetchAll();
+		
+		// Recent travel bookings
+		$stmt = db()->prepare('
+			SELECT tb.*, td.title as destination_title, td.departure_date, ta.company_name
+			FROM travel_bookings tb
+			JOIN travel_destinations td ON td.id = tb.destination_id
+			JOIN travel_agencies ta ON ta.id = td.agency_id
+			WHERE tb.user_id = ? AND tb.status = "confirmed"
+			ORDER BY tb.booking_date DESC 
+			LIMIT 3
+		');
+		$stmt->execute([$userId]);
+		$recentBookings = $stmt->fetchAll();
 		
 		// Check for pending travel bookings with M-Pesa payments
 		$stmt = db()->prepare('
@@ -16,10 +71,10 @@ class UserController
 			ORDER BY tb.booking_date DESC
 			LIMIT 1
 		');
-		$stmt->execute([$_SESSION['user_id']]);
+		$stmt->execute([$userId]);
 		$pendingBooking = $stmt->fetch();
 		
-		view('user/dashboard', compact('pendingBooking'));
+		view('user/dashboard', compact('user', 'orderStats', 'ticketStats', 'travelStats', 'recentOrders', 'recentBookings', 'pendingBooking'));
 	}
 
 	public function orders(): void

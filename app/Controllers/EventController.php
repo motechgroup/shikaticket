@@ -13,7 +13,27 @@ class EventController
         $organizerId = $_SESSION['organizer_id'] ?? 0;
         $events->execute([$organizerId]);
         $events = $events->fetchAll();
-		view('organizer/events/index', compact('events'));
+        
+        // Get admin-set commission rate for events
+        $commissionRate = $this->getCommissionRate('event_featured_commission');
+        
+		view('organizer/events/index', compact('events', 'commissionRate'));
+	}
+	
+	/**
+	 * Get commission rate from settings
+	 */
+	private function getCommissionRate(string $key): float
+	{
+		try {
+			$stmt = db()->prepare('SELECT value FROM settings WHERE `key` = ?');
+			$stmt->execute([$key]);
+			$result = $stmt->fetch();
+			
+			return $result ? (float)$result['value'] : 5.00; // Default to 5%
+		} catch (\Exception $e) {
+			return 5.00; // Default to 5% on error
+		}
 	}
 
 	public function create(): void
@@ -39,21 +59,43 @@ class EventController
 		if (empty($row['phone_verified_at'])) { redirect(base_url('/organizer/verify-otp')); }
 		$organizerId = (int)($_SESSION['organizer_id'] ?? 0);
         if ($organizerId <= 0) { redirect(base_url('/organizer/login')); }
-		// Handle poster upload (expects 1080x1080)
+		// Handle poster upload with security validation
 		$posterPath = null;
 		if (!empty($_FILES['poster']['tmp_name'])) {
+			// Check rate limit for file uploads
+			if (\App\Services\RateLimitService::isBlocked('file_uploads')) {
+				flash_set('error', 'Too many file uploads. Please try again later.');
+				redirect(base_url('/organizer/events/create'));
+			}
+
+			// Validate file upload
+			$errors = \App\Services\FileUploadService::validateImageUpload($_FILES['poster']);
+			if (!empty($errors)) {
+				\App\Services\RateLimitService::recordAttempt('file_uploads');
+				flash_set('error', 'File upload error: ' . implode(', ', $errors));
+				redirect(base_url('/organizer/events/create'));
+			}
+
+			// Check specific dimensions for poster
 			[$w, $h] = @getimagesize($_FILES['poster']['tmp_name']) ?: [0,0];
 			if ($w != 1080 || $h != 1080) {
+				\App\Services\RateLimitService::recordAttempt('file_uploads');
 				flash_set('error', 'Poster must be exactly 1080x1080 pixels.');
 				redirect(base_url('/organizer/events/create'));
 			}
-			$ext = pathinfo($_FILES['poster']['name'], PATHINFO_EXTENSION);
+
+			// Generate secure filename and upload
+			$filename = \App\Services\FileUploadService::generateSecureFilename($_FILES['poster']['name'], 'poster_');
 			$destDir = __DIR__ . '/../../public/uploads';
-			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
-			$filename = 'poster_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
 			$dest = $destDir . '/' . $filename;
-			move_uploaded_file($_FILES['poster']['tmp_name'], $dest);
-			$posterPath = 'uploads/' . $filename;
+			
+			if (\App\Services\FileUploadService::moveUploadedFile($_FILES['poster']['tmp_name'], $dest)) {
+				$posterPath = 'uploads/' . $filename;
+				\App\Services\RateLimitService::recordAttempt('file_uploads');
+			} else {
+				flash_set('error', 'Failed to upload poster.');
+				redirect(base_url('/organizer/events/create'));
+			}
 		}
 		$data = [
             'organizer_id' => $organizerId,
@@ -167,8 +209,8 @@ class EventController
 
 	public function publicIndex(): void
 	{
-		// Get all published events
-		$stmt = db()->query('SELECT e.*, o.full_name as organizer_name FROM events e JOIN organizers o ON o.id = e.organizer_id WHERE e.is_published = 1 ORDER BY e.event_date ASC, e.event_time ASC');
+		// Get all published events that haven't expired yet, prioritizing featured events
+		$stmt = db()->query('SELECT e.*, o.full_name as organizer_name FROM events e JOIN organizers o ON o.id = e.organizer_id WHERE e.is_published = 1 AND (e.event_date > CURDATE() OR (e.event_date = CURDATE() AND e.event_time > CURTIME())) ORDER BY e.is_featured DESC, e.event_date ASC, e.event_time ASC');
 		$events = $stmt->fetchAll();
 		view('events/index', compact('events'));
 	}
@@ -177,7 +219,8 @@ class EventController
 	{
 		$id = (int)($_GET['id'] ?? 0);
 		if ($id <= 0) { redirect(base_url('/')); }
-		$stmt = db()->prepare('SELECT * FROM events WHERE id = ? AND is_published = 1');
+		// Only allow access to published events that haven't expired yet
+		$stmt = db()->prepare('SELECT * FROM events WHERE id = ? AND is_published = 1 AND (event_date > CURDATE() OR (event_date = CURDATE() AND event_time > CURTIME()))');
 		$stmt->execute([$id]);
 		$event = $stmt->fetch();
 		if (!$event) { redirect(base_url('/')); }

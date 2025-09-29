@@ -80,6 +80,11 @@ class TravelBookingController
             
             $bookingId = db()->lastInsertId();
             
+            // Calculate and record featured commission if applicable
+            require_once __DIR__ . '/FeaturedContentController.php';
+            $baseCommission = 0; // Base commission is handled elsewhere
+            FeaturedContentController::recordFeaturedCommission('travel_destination', $destinationId, $bookingId, null, $destination['agency_id'], null, $totalAmount, $currency, $baseCommission);
+            
             // Redirect to checkout
             redirect(base_url('/travel/checkout?booking_id=' . $bookingId));
             

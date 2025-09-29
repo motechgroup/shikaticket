@@ -12,6 +12,7 @@
         <div class="border-b border-gray-800 pb-3 mb-3">
             <nav id="settingsTabs" class="flex flex-wrap gap-2 text-sm">
                 <button type="button" class="tab-btn active" data-tab="general">General</button>
+                <button type="button" class="tab-btn" data-tab="contact">Contact Info</button>
                 <button type="button" class="tab-btn" data-tab="seo">SEO</button>
                 <button type="button" class="tab-btn" data-tab="email">Email (SMTP)</button>
                 <button type="button" class="tab-btn" data-tab="sms">SMS</button>
@@ -36,6 +37,120 @@
                 <label class="block text-sm mb-1">Favicon</label>
                 <input type="file" name="site_favicon" accept="image/*" class="input">
                 <div class="text-xs text-gray-400 mt-1">Square image, e.g., 64x64.</div>
+            </div>
+        </div>
+
+        <!-- CONTACT INFORMATION SECTION -->
+        <div class="border-t pt-6" data-tab-panel="contact" style="display:none">
+            <h2 class="font-semibold mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                </svg>
+                Contact Information
+            </h2>
+            <p class="text-sm text-gray-400 mb-4">These details appear in the website footer and contact sections.</p>
+            
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+                    <input class="input" name="site_phone" placeholder="+254 700 000 000" value="<?php echo htmlspecialchars($settings['site.phone'] ?? '+254 700 000 000'); ?>">
+                    <div class="text-xs text-gray-400 mt-1">Include country code (e.g., +254 for Kenya)</div>
+                </div>
+                
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                    <input class="input" name="site_email" placeholder="info@example.com" value="<?php echo htmlspecialchars($settings['site.email'] ?? 'info@example.com'); ?>">
+                    <div class="text-xs text-gray-400 mt-1">Primary contact email address</div>
+                </div>
+                
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Physical Address</label>
+                    <input class="input" name="site_address" placeholder="Nairobi, Kenya" value="<?php echo htmlspecialchars($settings['site.address'] ?? 'Nairobi, Kenya'); ?>">
+                    <div class="text-xs text-gray-400 mt-1">City, Country or full address</div>
+                </div>
+            </div>
+
+            <!-- Social Media Links -->
+            <div class="mt-6">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                    Social Media Links
+                </h3>
+                
+                <div class="grid sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Facebook</label>
+                        <input class="input" name="site_facebook" placeholder="https://facebook.com/yourpage" value="<?php echo htmlspecialchars($settings['site.facebook'] ?? ''); ?>">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Twitter</label>
+                        <input class="input" name="site_twitter" placeholder="https://twitter.com/yourhandle" value="<?php echo htmlspecialchars($settings['site.twitter'] ?? ''); ?>">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Instagram</label>
+                        <input class="input" name="site_instagram" placeholder="https://instagram.com/yourhandle" value="<?php echo htmlspecialchars($settings['site.instagram'] ?? ''); ?>">
+                    </div>
+                </div>
+                <div class="text-xs text-gray-400 mt-2">Leave blank to hide social media links from footer</div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="mt-6">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Footer Preview
+                </h3>
+                
+                <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                    <div class="grid md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-4 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded bg-gray-700 flex items-center justify-center text-gray-300">📞</div>
+                            <div>
+                                <div class="text-sm text-gray-400">Call us</div>
+                                <div class="font-semibold text-gray-200" id="preview-phone"><?php echo htmlspecialchars($settings['site.phone'] ?? '+254 700 000 000'); ?></div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-4 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded bg-gray-700 flex items-center justify-center text-gray-300">✉️</div>
+                            <div>
+                                <div class="text-sm text-gray-400">Write to us</div>
+                                <div class="font-semibold text-gray-200" id="preview-email"><?php echo htmlspecialchars($settings['site.email'] ?? 'info@example.com'); ?></div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-4 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded bg-gray-700 flex items-center justify-center text-gray-300">📍</div>
+                            <div>
+                                <div class="text-sm text-gray-400">Address</div>
+                                <div class="font-semibold text-gray-200" id="preview-address"><?php echo htmlspecialchars($settings['site.address'] ?? 'Nairobi, Kenya'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <?php if (!empty($settings['site.facebook']) || !empty($settings['site.twitter']) || !empty($settings['site.instagram'])): ?>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-400 mb-2">Social Media</div>
+                        <div class="flex justify-center gap-4">
+                            <?php if (!empty($settings['site.facebook'])): ?>
+                                <a href="<?php echo htmlspecialchars($settings['site.facebook']); ?>" target="_blank" class="text-gray-400 hover:text-blue-400 transition-colors">Facebook</a>
+                            <?php endif; ?>
+                            <?php if (!empty($settings['site.twitter'])): ?>
+                                <a href="<?php echo htmlspecialchars($settings['site.twitter']); ?>" target="_blank" class="text-gray-400 hover:text-blue-400 transition-colors">Twitter</a>
+                            <?php endif; ?>
+                            <?php if (!empty($settings['site.instagram'])): ?>
+                                <a href="<?php echo htmlspecialchars($settings['site.instagram']); ?>" target="_blank" class="text-gray-400 hover:text-pink-400 transition-colors">Instagram</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="text-xs text-gray-400 mt-2">This is how your contact information will appear in the website footer</div>
             </div>
         </div>
 
@@ -226,6 +341,24 @@
       btns.forEach(b=>b.addEventListener('click', ()=>show(b.getAttribute('data-tab'))));
       // default
       show('general');
+
+      // Contact information preview updates
+      const contactInputs = {
+        'site_phone': 'preview-phone',
+        'site_email': 'preview-email',
+        'site_address': 'preview-address'
+      };
+
+      Object.keys(contactInputs).forEach(inputName => {
+        const input = document.querySelector(`input[name="${inputName}"]`);
+        const preview = document.getElementById(contactInputs[inputName]);
+        
+        if (input && preview) {
+          input.addEventListener('input', function() {
+            preview.textContent = this.value || this.placeholder;
+          });
+        }
+      });
     })();
     </script>
 

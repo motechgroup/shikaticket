@@ -40,6 +40,7 @@
                         <td class="p-3"><?php echo (int)$a['phone_verified'] ? 'Yes' : 'No'; ?></td>
                         <td class="p-3">
                             <div class="flex gap-2">
+                                <a class="btn btn-secondary" href="<?php echo base_url('/admin/travel/agencies/show?id='.(int)$a['id']); ?>">View</a>
                                 <?php if (!(int)$a['is_approved']): ?>
                                 <form method="post" action="<?php echo base_url('/admin/travel/agencies/approve'); ?>">
                                     <?php echo csrf_field(); ?>

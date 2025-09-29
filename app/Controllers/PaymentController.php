@@ -5,13 +5,235 @@ use App\Models\User;
 
 class PaymentController
 {
-	public function mpesa(): void
-	{
+    public function mpesa(): void
+    {
         if ((Setting::get('payments.mpesa.enabled', '0') !== '1')) {
             http_response_code(400);
             echo 'M-Pesa is disabled';
             return;
         }
+        // Support campaign payments without an order by passing type=campaign_request&reference={request_id}
+        $type = $_GET['type'] ?? '';
+        if ($type === 'marketing_order') {
+            // Reach-based marketing order (organizer/travel) payment
+            $orderId = (int)($_GET['order_id'] ?? 0);
+            $amountOverride = (float)($_GET['amount'] ?? 0);
+            if ($orderId <= 0) { http_response_code(400); echo 'Missing order_id'; return; }
+
+            // Load marketing order row
+            $stmt = db()->prepare('SELECT * FROM marketing_orders WHERE id = ?');
+            $stmt->execute([$orderId]);
+            $mOrder = $stmt->fetch();
+            if (!$mOrder) { http_response_code(404); echo 'Marketing order not found'; return; }
+
+            $amount = (float)($mOrder['total_cost'] ?? 0);
+            if ($amount <= 0) { $amount = $amountOverride; }
+            if ($amount <= 0) { http_response_code(400); echo 'Invalid amount'; return; }
+
+            // Determine payer phone by account type with optional override
+            $msisdn = '';
+            if (($mOrder['account_type'] ?? '') === 'organizer') {
+                $q = db()->prepare('SELECT mpesa_phone, phone FROM organizers WHERE id = ?');
+                $q->execute([(int)($mOrder['account_id'] ?? 0)]);
+                $row = $q->fetch();
+                $msisdn = preg_replace('/\D+/', '', ($row['mpesa_phone'] ?? ($row['phone'] ?? '')));
+            } elseif (($mOrder['account_type'] ?? '') === 'travel_agency') {
+                $q = db()->prepare('SELECT mpesa_phone, phone FROM travel_agencies WHERE id = ?');
+                $q->execute([(int)($mOrder['account_id'] ?? 0)]);
+                $row = $q->fetch();
+                $msisdn = preg_replace('/\D+/', '', ($row['mpesa_phone'] ?? ($row['phone'] ?? '')));
+            }
+            $override = preg_replace('/\D+/', '', ($_GET['msisdn'] ?? ''));
+            if ($override !== '') { $msisdn = $override; }
+
+            // Sandbox override if enabled
+            $env = Setting::get('payments.mpesa.env', 'sandbox');
+            if ($msisdn === '' && $env === 'sandbox' && \App\Models\Setting::get('payments.mpesa.force_sandbox_msisdn', '0') === '1') {
+                $msisdn = '254708374149';
+            }
+            if ($msisdn === '') { http_response_code(400); echo 'User phone missing'; return; }
+
+            // Config
+            $shortcode = Setting::get('payments.mpesa.shortcode', '');
+            $passkey = Setting::get('payments.mpesa.passkey', '');
+            $consumerKey = Setting::get('payments.mpesa.consumer_key', '');
+            $consumerSecret = Setting::get('payments.mpesa.consumer_secret', '');
+            $configuredCallback = Setting::get('payments.mpesa.callback_url', '');
+            $callbackUrl = $configuredCallback !== '' ? $configuredCallback : base_url('/pay/mpesa/callback');
+            if (strpos($callbackUrl, '/pay/mpesa/callback') === false) { $callbackUrl = rtrim($callbackUrl, '/') . '/pay/mpesa/callback'; }
+            if (!$shortcode || !$passkey || !$consumerKey || !$consumerSecret) { http_response_code(500); echo 'M-Pesa not configured'; return; }
+
+            // Mark pending
+            try { db()->prepare('UPDATE marketing_orders SET payment_status = ? WHERE id = ?')->execute(['pending', $orderId]); } catch (\Throwable $e) {}
+
+            // Access token
+            $tokenUrl = $env === 'production' ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials' : 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+            $ch = curl_init($tokenUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPHEADER => ['Authorization: Basic ' . base64_encode($consumerKey . ':' . $consumerSecret)],
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            $tokenResp = curl_exec($ch);
+            if ($tokenResp === false) { http_response_code(502); echo 'Token error'; return; }
+            $token = json_decode($tokenResp, true)['access_token'] ?? null;
+            if (!$token) { http_response_code(502); echo 'Token parse error'; return; }
+
+            $timestamp = date('YmdHis');
+            $password = base64_encode($shortcode . $passkey . $timestamp);
+            $stkUrl = $env === 'production' ? 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest' : 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
+            $payload = [
+                'BusinessShortCode' => $shortcode,
+                'Password' => $password,
+                'Timestamp' => $timestamp,
+                'TransactionType' => 'CustomerPayBillOnline',
+                'Amount' => (int)ceil($amount),
+                'PartyA' => $msisdn,
+                'PartyB' => $shortcode,
+                'PhoneNumber' => $msisdn,
+                'CallBackURL' => $callbackUrl,
+                'AccountReference' => 'MKTORD' . $orderId,
+                'TransactionDesc' => 'Marketing order #' . $orderId,
+            ];
+
+            $ch2 = curl_init($stkUrl);
+            curl_setopt_array($ch2, [
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Type: application/json'
+                ],
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+            $stkResp = curl_exec($ch2);
+            $resp = json_decode($stkResp, true) ?: [];
+            $checkoutId = $resp['CheckoutRequestID'] ?? null;
+            if ($checkoutId) {
+                db()->prepare('UPDATE marketing_orders SET payment_reference = ?, payment_status = ? WHERE id = ?')
+                    ->execute([$checkoutId, 'pending', $orderId]);
+            }
+            $desc = $resp['ResponseDescription'] ?? ($resp['errorMessage'] ?? 'Request sent');
+            flash_set('info', 'M-Pesa: ' . $desc);
+            $returnTo = (($mOrder['account_type'] ?? '') === 'travel_agency') ? '/travel/marketing' : '/organizer/marketing';
+            redirect(base_url($returnTo));
+            return;
+        }
+        if ($type === 'campaign_request') {
+            $requestId = (int)($_GET['reference'] ?? 0);
+            if ($requestId <= 0) { http_response_code(400); echo 'Missing reference'; return; }
+
+            // Load campaign request
+            $stmt = db()->prepare('SELECT * FROM marketing_campaign_requests WHERE id = ?');
+            $stmt->execute([$requestId]);
+            $req = $stmt->fetch();
+            if (!$req) { http_response_code(404); echo 'Campaign request not found'; return; }
+
+            $amountOverride = (float)($_GET['amount'] ?? 0);
+            $amount = $req['calculated_cost'] !== null ? (float)$req['calculated_cost'] : $amountOverride;
+            if ($amount <= 0) { http_response_code(400); echo 'Invalid amount'; return; }
+
+            // Determine payer phone based on account type
+            $msisdn = '';
+            if (($req['account_type'] ?? '') === 'organizer') {
+                $q = db()->prepare('SELECT mpesa_phone, phone FROM organizers WHERE id = ?');
+                $q->execute([(int)$req['account_id']]);
+                $row = $q->fetch();
+                $msisdn = preg_replace('/\D+/', '', ($row['mpesa_phone'] ?? ($row['phone'] ?? '')));
+            } elseif (($req['account_type'] ?? '') === 'travel_agency') {
+                $q = db()->prepare('SELECT mpesa_phone, phone FROM travel_agencies WHERE id = ?');
+                $q->execute([(int)$req['account_id']]);
+                $row = $q->fetch();
+                $msisdn = preg_replace('/\D+/', '', ($row['mpesa_phone'] ?? ($row['phone'] ?? '')));
+            }
+            // Optional override via query param
+            $override = preg_replace('/\D+/', '', ($_GET['msisdn'] ?? ''));
+            if ($override !== '') { $msisdn = $override; }
+
+            // Sandbox fallback if configured
+            if ($msisdn === '') {
+                $env = Setting::get('payments.mpesa.env', 'sandbox');
+                if ($env === 'sandbox' && \App\Models\Setting::get('payments.mpesa.force_sandbox_msisdn', '0') === '1') {
+                    $msisdn = '254708374149';
+                }
+            }
+            if ($msisdn === '') { http_response_code(400); echo 'User phone missing'; return; }
+
+            // Build STK Push request using settings like normal flow
+            $shortcode = Setting::get('payments.mpesa.shortcode', '');
+            $passkey = Setting::get('payments.mpesa.passkey', '');
+            $consumerKey = Setting::get('payments.mpesa.consumer_key', '');
+            $consumerSecret = Setting::get('payments.mpesa.consumer_secret', '');
+            $env = Setting::get('payments.mpesa.env', 'sandbox');
+            $configuredCallback = Setting::get('payments.mpesa.callback_url', '');
+            $callbackUrl = $configuredCallback !== '' ? $configuredCallback : base_url('/pay/mpesa/callback');
+            if (strpos($callbackUrl, '/pay/mpesa/callback') === false) { $callbackUrl = rtrim($callbackUrl, '/') . '/pay/mpesa/callback'; }
+            if (!$shortcode || !$passkey || !$consumerKey || !$consumerSecret) { http_response_code(500); echo 'M-Pesa not configured'; return; }
+
+            // Access token
+            $tokenUrl = $env === 'production' ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials' : 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+            $ch = curl_init($tokenUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPHEADER => ['Authorization: Basic ' . base64_encode($consumerKey . ':' . $consumerSecret)],
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            $tokenResp = curl_exec($ch);
+            if ($tokenResp === false) { http_response_code(502); echo 'Token error'; return; }
+            $token = json_decode($tokenResp, true)['access_token'] ?? null;
+            if (!$token) { http_response_code(502); echo 'Token parse error'; return; }
+
+            $timestamp = date('YmdHis');
+            $password = base64_encode($shortcode . $passkey . $timestamp);
+            $stkUrl = $env === 'production' ? 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest' : 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
+            $payload = [
+                'BusinessShortCode' => $shortcode,
+                'Password' => $password,
+                'Timestamp' => $timestamp,
+                'TransactionType' => 'CustomerPayBillOnline',
+                'Amount' => (int)ceil($amount),
+                'PartyA' => $msisdn,
+                'PartyB' => $shortcode,
+                'PhoneNumber' => $msisdn,
+                'CallBackURL' => $callbackUrl,
+                'AccountReference' => 'CAMPAIGN' . $requestId,
+                'TransactionDesc' => 'Marketing campaign #' . $requestId,
+            ];
+
+            // Mark request as payment pending
+            db()->prepare('UPDATE marketing_campaign_requests SET payment_status = ? WHERE id = ?')
+                ->execute(['pending', $requestId]);
+
+            // Initiate STK
+            $ch2 = curl_init($stkUrl);
+            curl_setopt_array($ch2, [
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Type: application/json'
+                ],
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+            $stkResp = curl_exec($ch2);
+            $resp = json_decode($stkResp, true) ?: [];
+            $checkoutId = $resp['CheckoutRequestID'] ?? null;
+            if ($checkoutId) {
+                db()->prepare('UPDATE marketing_campaign_requests SET payment_reference = ? WHERE id = ?')
+                    ->execute([$checkoutId, $requestId]);
+            }
+            $desc = $resp['ResponseDescription'] ?? ($resp['errorMessage'] ?? 'Request sent');
+            if (!$checkoutId) {
+                // Mark failed to help diagnostics
+                try { db()->prepare('UPDATE marketing_campaign_requests SET payment_status = ? WHERE id = ?')->execute(['failed', $requestId]); } catch (\Throwable $e) {}
+            }
+            // Redirect back to marketing page with a notice
+            flash_set('info', 'M-Pesa: ' . $desc);
+            $returnTo = ($req['account_type'] ?? '') === 'travel_agency' ? '/travel/marketing' : '/organizer/marketing';
+            redirect(base_url($returnTo));
+            return;
+        }
+        // Default flow: expects an order_id
         $orderId = (int)($_GET['order_id'] ?? $_POST['order_id'] ?? 0);
         if ($orderId <= 0) { http_response_code(400); echo 'Missing order_id'; return; }
 
@@ -427,6 +649,68 @@ class PaymentController
         $secretKey = Setting::get('payments.flutterwave.secret_key', '');
         if ($publicKey === '' || $secretKey === '') { http_response_code(500); echo 'Flutterwave not configured'; return; }
 
+        // Campaign request payment flow
+        $type = $_GET['type'] ?? '';
+        if ($type === 'campaign_request') {
+            $requestId = (int)($_GET['reference'] ?? 0);
+            if ($requestId <= 0) { http_response_code(400); echo 'Missing reference'; return; }
+            $stmt = db()->prepare('SELECT * FROM marketing_campaign_requests WHERE id = ?');
+            $stmt->execute([$requestId]);
+            $req = $stmt->fetch();
+            if (!$req) { http_response_code(404); echo 'Campaign request not found'; return; }
+
+            $amount = number_format((float)($req['calculated_cost'] ?? 0), 2, '.', '');
+            if ((float)$amount <= 0) { http_response_code(400); echo 'Invalid amount'; return; }
+
+            $user = ['email' => ''];
+            if (($req['account_type'] ?? '') === 'organizer') {
+                $u = db()->prepare('SELECT email, phone, full_name FROM organizers WHERE id = ?'); $u->execute([(int)$req['account_id']]); $user = $u->fetch() ?: $user;
+            } else {
+                $u = db()->prepare('SELECT email, phone, company_name as full_name FROM travel_agencies WHERE id = ?'); $u->execute([(int)$req['account_id']]); $user = $u->fetch() ?: $user;
+            }
+
+            $currency = 'KES';
+            $txRef = 'CAMPAIGN' . $requestId . '-' . time();
+            $redirectUrl = base_url('/pay/flutterwave');
+
+            $payload = [
+                'tx_ref' => $txRef,
+                'amount' => $amount,
+                'currency' => $currency,
+                'redirect_url' => $redirectUrl,
+                'customer' => [
+                    'email' => $user['email'] ?? 'client@example.com',
+                    'phonenumber' => preg_replace('/\D+/', '', $user['phone'] ?? ''),
+                    'name' => $user['full_name'] ?? 'Client',
+                ],
+                'customizations' => [
+                    'title' => 'Marketing Campaign #' . $requestId,
+                    'description' => 'Campaign payment',
+                ],
+            ];
+
+            $ch = curl_init('https://api.flutterwave.com/v3/payments');
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $secretKey],
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_RETURNTRANSFER => true,
+            ]);
+            $resp = curl_exec($ch);
+            $json = json_decode($resp, true) ?: [];
+            $link = $json['data']['link'] ?? '';
+            if ($link !== '') {
+                // Store tx_ref on campaign request for later verification
+                db()->prepare('UPDATE marketing_campaign_requests SET payment_reference = ?, payment_status = ? WHERE id = ?')
+                    ->execute([$txRef, 'pending', $requestId]);
+                header('Location: ' . $link);
+                exit;
+            }
+            http_response_code(502);
+            echo 'Flutterwave initiation failed';
+            return;
+        }
+
         // If redirected back from Flutterwave, verify the transaction
         $status = $_GET['status'] ?? '';
         $txId = $_GET['transaction_id'] ?? '';
@@ -441,8 +725,36 @@ class PaymentController
             $resp = curl_exec($ch);
             $json = json_decode($resp, true) ?: [];
             $ok = (($json['status'] ?? '') === 'success') && (($json['data']['status'] ?? '') === 'successful');
-            // Extract order id from tx_ref generated as 'ORDER{orderId}-{timestamp}' or 'TRAVEL{bookingId}-{timestamp}'
+            // Extract order id or campaign id from tx_ref
             $txRef = $json['data']['tx_ref'] ?? '';
+            if (preg_match('/CAMPAIGN(\d+)/', $txRef, $mm)) {
+                $requestId = (int)($mm[1] ?? 0);
+                $ok = (($json['status'] ?? '') === 'success') && (($json['data']['status'] ?? '') === 'successful');
+                if ($ok && $requestId > 0) {
+                    db()->prepare('UPDATE marketing_campaign_requests SET payment_status = ?, payment_reference = ? WHERE id = ?')
+                        ->execute(['paid', (string)($json['data']['id'] ?? $txId), $requestId]);
+                    // Send SMS
+                    try { 
+                        $sms = new \App\Services\Sms(); 
+                        if ($sms->isConfigured()) {
+                            $reqRowStmt = db()->prepare('SELECT account_type, account_id FROM marketing_campaign_requests WHERE id = ?');
+                            $reqRowStmt->execute([$requestId]);
+                            $rrow = $reqRowStmt->fetch();
+                            $phone = '';
+                            if (($rrow['account_type'] ?? '') === 'organizer') {
+                                $u = db()->prepare('SELECT phone FROM organizers WHERE id = ?'); $u->execute([(int)$rrow['account_id']]); $row=$u->fetch(); $phone=$row['phone'] ?? '';
+                            } else {
+                                $u = db()->prepare('SELECT phone FROM travel_agencies WHERE id = ?'); $u->execute([(int)$rrow['account_id']]); $row=$u->fetch(); $phone=$row['phone'] ?? '';
+                            }
+                            if ($phone !== '') { $sms->send($phone, 'Campaign payment received. Request #' . $requestId . ' is queued for review.'); }
+                        }
+                    } catch (\Throwable $e) {}
+                    flash_set('success', 'Campaign payment confirmed.');
+                    $returnTo = (($rrow['account_type'] ?? '') === 'travel_agency') ? '/travel/marketing' : '/organizer/marketing';
+                    redirect(base_url($returnTo));
+                    return;
+                }
+            }
             
             // Check if this is a travel booking
             if (preg_match('/TRAVEL(\d+)/', $txRef, $m)) {
@@ -632,7 +944,63 @@ class PaymentController
 			return;
 		}
 		
-		// Map payment by checkoutId for regular orders
+        // First, map to marketing order using stored payment_reference
+        $moStmt = db()->prepare("SELECT * FROM marketing_orders WHERE payment_reference = ? ORDER BY id DESC LIMIT 1");
+        $moStmt->execute([$checkoutId]);
+        $mOrder = $moStmt->fetch();
+        if ($mOrder) {
+            if ($resultCode === 0) {
+                db()->prepare('UPDATE marketing_orders SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+                    ->execute(['paid', (int)$mOrder['id']]);
+                // Notify via SMS (best-effort)
+                try {
+                    $sms = new \App\Services\Sms();
+                    if ($sms->isConfigured()) {
+                        $phone = '';
+                        if (($mOrder['account_type'] ?? '') === 'organizer') {
+                            $r = db()->prepare('SELECT phone FROM organizers WHERE id = ?'); $r->execute([(int)$mOrder['account_id']]); $row=$r->fetch(); $phone=$row['phone'] ?? '';
+                        } else {
+                            $r = db()->prepare('SELECT phone FROM travel_agencies WHERE id = ?'); $r->execute([(int)$mOrder['account_id']]); $row=$r->fetch(); $phone=$row['phone'] ?? '';
+                        }
+                        if ($phone !== '') { $sms->send($phone, 'Marketing order #' . $mOrder['id'] . ' payment received. We\'ll start processing shortly.'); }
+                    }
+                } catch (\Throwable $e) {}
+            }
+            echo 'OK';
+            return;
+        }
+
+        // Then try: map to marketing campaign request using stored payment_reference
+        $mStmt = db()->prepare("SELECT * FROM marketing_campaign_requests WHERE payment_reference = ? ORDER BY id DESC LIMIT 1");
+        $mStmt->execute([$checkoutId]);
+        $mReq = $mStmt->fetch();
+        if ($mReq) {
+            if ($resultCode === 0) {
+                // Mark as paid and notify via SMS
+                db()->prepare('UPDATE marketing_campaign_requests SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+                    ->execute(['paid', (int)$mReq['id']]);
+                try {
+                    $sms = new \App\Services\Sms();
+                    if ($sms->isConfigured()) {
+                        $phone = '';
+                        if (($mReq['account_type'] ?? '') === 'organizer') {
+                            $r = db()->prepare('SELECT phone FROM organizers WHERE id = ?'); $r->execute([(int)$mReq['account_id']]); $row=$r->fetch(); $phone=$row['phone'] ?? '';
+                        } else {
+                            $r = db()->prepare('SELECT phone FROM travel_agencies WHERE id = ?'); $r->execute([(int)$mReq['account_id']]); $row=$r->fetch(); $phone=$row['phone'] ?? '';
+                        }
+                        if ($phone !== '') {
+                            $sms->send($phone, 'Campaign payment received. Request #' . $mReq['id'] . ' is queued for review.');
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            } else {
+                // keep pending
+            }
+            echo 'OK';
+            return;
+        }
+
+        // Map payment by checkoutId for regular orders
 		$stmt = db()->prepare("SELECT * FROM payments WHERE provider = 'mpesa' AND provider_ref = ? ORDER BY id DESC LIMIT 1");
 		$stmt->execute([$checkoutId]);
 		$payment = $stmt->fetch();

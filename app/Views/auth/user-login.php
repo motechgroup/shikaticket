@@ -11,7 +11,10 @@
 			<input name="password" type="password" required class="input">
 		</div>
 		<button class="w-full btn btn-primary">Login</button>
-		<p class="text-sm text-gray-400">Don't have an account? <a class="link" href="<?php echo base_url('/register'); ?>">Register</a></p>
+		<div class="flex justify-between items-center text-sm text-gray-400">
+			<a class="link" href="<?php echo base_url('/password-reset?type=user'); ?>">Forgot Password?</a>
+			<a class="link" href="<?php echo base_url('/register'); ?>">Don't have an account?</a>
+		</div>
 	</form>
 </div>
 

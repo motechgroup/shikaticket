@@ -14,16 +14,22 @@ class OrganizersController
         $followers = db()->prepare('SELECT COUNT(*) AS c FROM organizer_followers WHERE organizer_id = ?');
         $followers->execute([$id]);
         $followersCount = (int)($followers->fetch()['c'] ?? 0);
-        $events = db()->prepare('SELECT id, title, poster_path, event_date FROM events WHERE organizer_id = ? AND is_published = 1 ORDER BY event_date DESC');
-        $events->execute([$id]);
-        $eventsList = $events->fetchAll();
+        // Get upcoming events (clickable)
+        $upcomingEvents = db()->prepare('SELECT id, title, poster_path, event_date, event_time FROM events WHERE organizer_id = ? AND is_published = 1 AND (event_date > CURDATE() OR (event_date = CURDATE() AND event_time > CURTIME())) ORDER BY event_date ASC');
+        $upcomingEvents->execute([$id]);
+        $upcomingEventsList = $upcomingEvents->fetchAll();
+        
+        // Get past events (non-clickable, small cards)
+        $pastEvents = db()->prepare('SELECT id, title, poster_path, event_date, event_time FROM events WHERE organizer_id = ? AND is_published = 1 AND (event_date < CURDATE() OR (event_date = CURDATE() AND event_time <= CURTIME())) ORDER BY event_date DESC LIMIT 12');
+        $pastEvents->execute([$id]);
+        $pastEventsList = $pastEvents->fetchAll();
         $isFollowing = false;
         if (isset($_SESSION['user_id'])) {
             $ck = db()->prepare('SELECT 1 FROM organizer_followers WHERE organizer_id = ? AND user_id = ? LIMIT 1');
             $ck->execute([$id, (int)$_SESSION['user_id']]);
             $isFollowing = (bool)$ck->fetch();
         }
-        view('organizers/show', compact('organizer','followersCount','eventsList','isFollowing'));
+        view('organizers/show', compact('organizer','followersCount','upcomingEventsList','pastEventsList','isFollowing'));
     }
 
     public function follow(): void

@@ -5,6 +5,38 @@ define('DB_NAME', 'ticko');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
+// Security settings
+define('ENVIRONMENT', $_ENV['APP_ENV'] ?? 'production'); // development, production
+define('DEBUG_MODE', ENVIRONMENT === 'development');
+
+// Simple autoloader for security classes
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $base_dir = __DIR__ . '/../app/';
+    
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+    
+    $relative_class = substr($class, $len);
+    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+    
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+
+// Initialize secure session
+if (session_status() === PHP_SESSION_NONE) {
+    \App\Services\SessionSecurityService::initializeSecureSession();
+}
+
+// Initialize security middleware
+\App\Middleware\SecurityMiddleware::addSecurityHeaders();
+\App\Middleware\SecurityMiddleware::checkForSuspiciousActivity();
+\App\Middleware\SecurityMiddleware::checkSessionSecurity();
+
 function db(): PDO {
 	static $pdo = null;
 	if ($pdo === null) {
@@ -81,14 +113,26 @@ function csrf_field(): string {
 }
 
 function verify_csrf(): void {
-	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		$token = $_POST['csrf_token'] ?? '';
-		if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
-			http_response_code(419);
-			echo 'CSRF token mismatch.';
-			exit;
-		}
-	}
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if ($method === 'POST' || $method === 'PUT') {
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+
+        $token = '';
+        if (stripos($contentType, 'application/json') !== false) {
+            // Accept token via header for JSON requests
+            $headers = function_exists('getallheaders') ? getallheaders() : [];
+            $token = $headers['X-CSRF-Token'] ?? $headers['X-Csrf-Token'] ?? '';
+        } else {
+            // Traditional form submission
+            $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+        }
+
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            http_response_code(419);
+            echo 'CSRF token mismatch.';
+            exit;
+        }
+    }
 }
 
 // Base URL helper (assumes project root points to /public)

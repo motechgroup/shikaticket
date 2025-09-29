@@ -217,4 +217,83 @@
       </div>
     </div>
   </div>
+
+  <!-- Related Destinations -->
+  <?php if (!empty($relatedDestinations)): ?>
+  <div class="mt-16">
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Other Destinations</h2>
+      <p class="text-gray-400 max-w-2xl mx-auto">Discover more amazing travel experiences from our trusted partners</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <?php foreach ($relatedDestinations as $related): ?>
+      <div class="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:border-red-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
+        <a href="<?php echo base_url('/travel/destination?id=' . $related['id']); ?>" class="block">
+          <!-- Destination Image -->
+          <div class="relative h-48 overflow-hidden">
+            <?php if (!empty($related['image_path'])): ?>
+              <img src="<?php echo base_url($related['image_path']); ?>" 
+                   alt="<?php echo htmlspecialchars($related['title']); ?>" 
+                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <?php else: ?>
+              <div class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+                <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+            <?php endif; ?>
+            
+            <!-- Overlay with destination info -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+            <div class="absolute bottom-4 left-4 right-4 text-white">
+              <h3 class="text-lg font-bold mb-2 line-clamp-1"><?php echo htmlspecialchars($related['title']); ?></h3>
+              
+              <!-- Destination details -->
+              <div class="flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span><?php echo (int)$related['duration_days']; ?> <?php echo (int)$related['duration_days'] === 1 ? 'Day' : 'Days'; ?></span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  <span>1</span>
+                </div>
+              </div>
+              
+              <!-- Price -->
+              <div class="mt-2 text-lg font-bold text-red-400">
+                From <?php echo htmlspecialchars($related['currency']); ?> <?php echo number_format((float)$related['price'], 0); ?>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Agency info -->
+          <div class="p-4">
+            <div class="text-sm text-gray-400">
+              by <?php echo htmlspecialchars($related['company_name']); ?>
+            </div>
+          </div>
+        </a>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    
+    <!-- View all destinations link -->
+    <div class="text-center mt-8">
+      <a href="<?php echo base_url('/travel'); ?>" class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        View All Destinations
+      </a>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>

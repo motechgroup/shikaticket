@@ -57,6 +57,94 @@
             </form>
         </div>
     </div>
+
+    <!-- Payment Information Section -->
+    <div class="card p-4 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+                Payment Information
+            </h2>
+            <?php if ($organizer['payment_info_verified'] ?? 0): ?>
+                <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Verified</span>
+            <?php elseif (!empty($organizer['payout_method'])): ?>
+                <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">Pending Verification</span>
+            <?php else: ?>
+                <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Not Set</span>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($organizer['payout_method'])): ?>
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Payment Method</label>
+                    <div class="text-lg font-semibold capitalize"><?php echo str_replace('_', ' ', htmlspecialchars($organizer['payout_method'])); ?></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Last Updated</label>
+                    <div class="text-lg font-semibold"><?php echo $organizer['payment_info_updated_at'] ? date('M j, Y', strtotime($organizer['payment_info_updated_at'])) : 'Never'; ?></div>
+                </div>
+            </div>
+
+            <?php if ($organizer['payout_method'] === 'bank_transfer'): ?>
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Bank Name</label>
+                        <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['bank_name'] ?? ''); ?></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Account Name</label>
+                        <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['bank_account_name'] ?? ''); ?></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Account Number</label>
+                        <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['bank_account_number'] ?? ''); ?></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Bank Code</label>
+                        <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['bank_code'] ?? ''); ?></div>
+                    </div>
+                </div>
+            <?php elseif ($organizer['payout_method'] === 'mpesa'): ?>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">M-Pesa Phone</label>
+                    <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['mpesa_phone'] ?? ''); ?></div>
+                </div>
+            <?php elseif ($organizer['payout_method'] === 'paypal'): ?>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">PayPal Email</label>
+                    <div class="text-lg font-semibold"><?php echo htmlspecialchars($organizer['paypal_email'] ?? ''); ?></div>
+                </div>
+            <?php elseif ($organizer['payout_method'] === 'other'): ?>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Payment Details</label>
+                    <div class="text-lg font-semibold"><?php echo nl2br(htmlspecialchars($organizer['other_payment_details'] ?? '')); ?></div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!($organizer['payment_info_verified'] ?? 0)): ?>
+                <div class="mt-4 pt-4 border-t">
+                    <form method="post" action="<?php echo base_url('/admin/organizers/verify-payment'); ?>" class="flex items-center gap-3">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="id" value="<?php echo (int)$organizer['id']; ?>">
+                        <button type="submit" class="btn btn-primary" name="action" value="verify">Verify Payment Info</button>
+                        <button type="submit" class="btn btn-secondary" name="action" value="reject">Reject Payment Info</button>
+                    </form>
+                </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <div class="text-center py-8 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <p class="text-lg font-medium">No payment information set</p>
+                <p class="text-sm">Organizer has not set up payment details yet.</p>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <div class="card p-4 mb-6">
         <h2 class="font-semibold mb-3">Events</h2>
         <form class="mb-3 flex items-center gap-2" method="get" action="">

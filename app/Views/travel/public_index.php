@@ -51,6 +51,11 @@
           <div class="absolute top-3 right-3 bg-gray-800 text-white text-xs px-2 py-1 rounded-full font-medium">
             <?php echo (int)($d['duration_days'] ?? 1); ?> days
           </div>
+          <?php if ($d['is_featured']): ?>
+          <div class="absolute top-3 left-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+            <span>⭐</span> Featured
+          </div>
+          <?php endif; ?>
         </div>
         <?php endif; ?>
         <div class="p-4">
@@ -94,6 +99,11 @@
           <div class="absolute top-3 right-3 bg-gray-800 text-white text-xs px-2 py-1 rounded-full font-medium">
             <?php echo (int)($d['duration_days'] ?? 1); ?> days
           </div>
+          <?php if ($d['is_featured']): ?>
+          <div class="absolute top-3 left-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+            <span>⭐</span> Featured
+          </div>
+          <?php endif; ?>
         </div>
         <?php endif; ?>
         <div class="p-4">

@@ -26,7 +26,7 @@ class PagesController
         if ($country !== '') { $sql .= ' AND ta.country = ?'; $params[] = $country; }
         if ($city !== '') { $sql .= ' AND ta.city = ?'; $params[] = $city; }
         if ($onlyFeatured === 1) { $sql .= ' AND td.is_featured = 1'; }
-        $sql .= ' ORDER BY td.created_at DESC LIMIT 30';
+        $sql .= ' ORDER BY td.is_featured DESC, td.created_at DESC LIMIT 30';
         try { $stmt = db()->prepare($sql); $stmt->execute($params); $destinations = $stmt->fetchAll(); } catch (\PDOException $e) { $destinations = []; }
         $featured = \App\Models\TravelAgency::getFeaturedDestinations(6);
         $latest = \App\Models\TravelAgency::getAllPublishedDestinations(12, 0);
@@ -62,7 +62,92 @@ class PagesController
         $destination['itinerary'] = json_decode($destination['itinerary'] ?? '[]', true);
         $destination['gallery_paths'] = json_decode($destination['gallery_paths'] ?? '[]', true);
         
-        view('travel/destination_show', compact('destination'));
+        // Fetch related destinations (same agency, different destination)
+        $relatedStmt = db()->prepare('
+            SELECT td.id, td.title, td.image_path, td.price, td.currency, td.duration_days, ta.company_name
+            FROM travel_destinations td 
+            JOIN travel_agencies ta ON ta.id = td.agency_id 
+            WHERE td.id != ? AND td.agency_id = ? AND td.is_published = 1 AND ta.is_approved = 1 AND ta.is_active = 1
+            ORDER BY td.created_at DESC 
+            LIMIT 4
+        ');
+        $relatedStmt->execute([$id, $destination['agency_id']]);
+        $relatedDestinations = $relatedStmt->fetchAll();
+        
+        // If not enough related destinations from same agency, get popular ones (excluding already selected ones)
+        if (count($relatedDestinations) < 4) {
+            $limit = 4 - count($relatedDestinations);
+            
+            // Get IDs of already selected destinations to exclude them
+            $excludeIds = [$id]; // Always exclude current destination
+            foreach ($relatedDestinations as $related) {
+                $excludeIds[] = $related['id'];
+            }
+            $excludeIdsStr = implode(',', array_map('intval', $excludeIds));
+            
+            $popularStmt = db()->prepare('
+                SELECT td.id, td.title, td.image_path, td.price, td.currency, td.duration_days, ta.company_name
+                FROM travel_destinations td 
+                JOIN travel_agencies ta ON ta.id = td.agency_id 
+                WHERE td.id NOT IN (' . $excludeIdsStr . ') AND td.is_published = 1 AND ta.is_approved = 1 AND ta.is_active = 1
+                ORDER BY td.created_at DESC 
+                LIMIT ' . (int)$limit . '
+            ');
+            $popularStmt->execute();
+            $popularDestinations = $popularStmt->fetchAll();
+            $relatedDestinations = array_merge($relatedDestinations, $popularDestinations);
+        }
+        
+        // Remove any duplicates by ID (safety check)
+        $uniqueDestinations = [];
+        $seenIds = [];
+        foreach ($relatedDestinations as $dest) {
+            if (!in_array($dest['id'], $seenIds)) {
+                $uniqueDestinations[] = $dest;
+                $seenIds[] = $dest['id'];
+            }
+        }
+        $relatedDestinations = $uniqueDestinations;
+        
+        view('travel/destination_show', compact('destination', 'relatedDestinations'));
+    }
+
+    public function search(): void
+    {
+        $query = trim($_GET['q'] ?? '');
+        $events = [];
+        $destinations = [];
+        
+        if (!empty($query)) {
+            // Search events
+            $eventStmt = db()->prepare('
+                SELECT e.*, o.full_name as organizer_name
+                FROM events e 
+                JOIN organizers o ON e.organizer_id = o.id
+                WHERE (e.title LIKE ? OR e.description LIKE ? OR e.venue LIKE ? OR e.category LIKE ?)
+                AND e.is_published = 1 AND e.event_date >= CURDATE()
+                ORDER BY e.event_date ASC 
+                LIMIT 10
+            ');
+            $searchTerm = "%$query%";
+            $eventStmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+            $events = $eventStmt->fetchAll();
+            
+            // Search travel destinations
+            $destStmt = db()->prepare('
+                SELECT td.*, ta.company_name, ta.logo_path
+                FROM travel_destinations td 
+                JOIN travel_agencies ta ON ta.id = td.agency_id
+                WHERE (td.title LIKE ? OR td.description LIKE ? OR td.destination LIKE ? OR ta.company_name LIKE ?)
+                AND td.is_published = 1 AND ta.is_approved = 1 AND ta.is_active = 1
+                ORDER BY td.created_at DESC 
+                LIMIT 10
+            ');
+            $destStmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+            $destinations = $destStmt->fetchAll();
+        }
+        
+        view('search/results', compact('query', 'events', 'destinations'));
     }
 
     public function travelAgencyShow(): void
