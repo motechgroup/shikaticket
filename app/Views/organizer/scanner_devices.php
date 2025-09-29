@@ -12,6 +12,34 @@
 		</form>
 	</div>
 
+	<!-- Mobile Scanner Apps CTA -->
+	<?php 
+	$androidUrl = \App\Models\Setting::get('apps.android_scanner_url', '');
+	$iosUrl = \App\Models\Setting::get('apps.ios_scanner_url', '');
+	$appstoreImg = base_url('/uploads/assets/appstore.png');
+	$playstoreImg = base_url('/uploads/assets/playstore.png');
+	?>
+	<div class="card p-4 mb-6">
+		<div class="flex items-center justify-between flex-wrap gap-3">
+			<div>
+				<h3 class="text-white font-semibold mb-1">Get the Mobile Scanner App</h3>
+				<p class="text-sm text-gray-400">Install on your devices for fast check-ins.</p>
+			</div>
+			<div class="flex items-center gap-3">
+				<?php if ($iosUrl): ?>
+					<a href="<?php echo htmlspecialchars($iosUrl); ?>" target="_blank" rel="noopener"><img src="<?php echo $appstoreImg; ?>" class="h-10" alt="App Store"></a>
+				<?php else: ?>
+					<span title="Coming soon" class="opacity-60 cursor-not-allowed"><img src="<?php echo $appstoreImg; ?>" class="h-10" alt="App Store (coming soon)"></span>
+				<?php endif; ?>
+				<?php if ($androidUrl): ?>
+					<a href="<?php echo htmlspecialchars($androidUrl); ?>" target="_blank" rel="noopener"><img src="<?php echo $playstoreImg; ?>" class="h-10" alt="Google Play"></a>
+				<?php else: ?>
+					<span title="Coming soon" class="opacity-60 cursor-not-allowed"><img src="<?php echo $playstoreImg; ?>" class="h-10" alt="Google Play (coming soon)"></span>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+
 	<!-- Device List -->
 	<div class="card p-0">
 		<?php if (empty($devices)): ?>
