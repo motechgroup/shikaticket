@@ -17,7 +17,25 @@
                 <button type="button" class="tab-btn" data-tab="email">Email (SMTP)</button>
                 <button type="button" class="tab-btn" data-tab="sms">SMS</button>
                 <button type="button" class="tab-btn" data-tab="payments">Payments</button>
+                <button type="button" class="tab-btn" data-tab="apps">Apps</button>
             </nav>
+        </div>
+        
+        <!-- APPS (Mobile) SECTION -->
+        <div class="border-t pt-6" data-tab-panel="apps" style="display:none">
+            <h2 class="font-semibold mb-3">Mobile Scanner Apps</h2>
+            <p class="text-sm text-gray-400 mb-4">Set the store links for the Organizer/Agency Scanner app. These links render on the organizer dashboard and travel scanner pages.</p>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm mb-1">Google Play URL</label>
+                    <input class="input" name="apps_android_scanner_url" placeholder="https://play.google.com/store/apps/details?id=..." value="<?php echo htmlspecialchars($settings['apps.android_scanner_url'] ?? ''); ?>">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Apple App Store URL</label>
+                    <input class="input" name="apps_ios_scanner_url" placeholder="https://apps.apple.com/app/id..." value="<?php echo htmlspecialchars($settings['apps.ios_scanner_url'] ?? ''); ?>">
+                </div>
+            </div>
+            <div class="text-xs text-gray-400 mt-2">Leave blank to show a disabled “Coming soon” badge.</div>
         </div>
         <div data-tab-panel="general">
             <label class="block text-sm mb-1">Site Name</label>

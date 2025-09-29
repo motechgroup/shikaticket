@@ -1206,6 +1206,10 @@ class AdminController
             Setting::set('seo.og_image', 'uploads/site/' . $filename);
         }
 
+        // Mobile scanner app links
+        Setting::set('apps.android_scanner_url', trim($_POST['apps_android_scanner_url'] ?? ''));
+        Setting::set('apps.ios_scanner_url', trim($_POST['apps_ios_scanner_url'] ?? ''));
+
         // SMTP
         Setting::set('smtp.host', trim($_POST['smtp_host'] ?? ''));
         Setting::set('smtp.port', trim($_POST['smtp_port'] ?? '587'));
