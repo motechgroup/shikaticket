@@ -21,6 +21,10 @@
 	$totalTicketsRedeemed = 0;
 	$upcomingEvents = 0;
 	$completedEvents = 0;
+	$androidUrl = \App\Models\Setting::get('apps.android_scanner_url', '');
+	$iosUrl = \App\Models\Setting::get('apps.ios_scanner_url', '');
+	$appstoreImg = base_url('/uploads/assets/appstore.png');
+	$playstoreImg = base_url('/uploads/assets/playstore.png');
 	
 	try { 
 		$r = db()->prepare('SELECT COUNT(*) AS c FROM organizer_followers WHERE organizer_id = ?'); 
@@ -121,6 +125,20 @@
 						Event enthusiasts
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Mobile Scanner App CTA -->
+	<div class="mb-8 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+		<div class="flex items-center justify-between flex-wrap gap-3">
+			<div>
+				<h3 class="text-white font-semibold mb-1">Get the Mobile Scanner App</h3>
+				<p class="text-sm text-gray-400">Install for quicker on-site check-ins.</p>
+			</div>
+			<div class="flex items-center gap-3">
+				<?php if ($iosUrl): ?><a href="<?php echo htmlspecialchars($iosUrl); ?>" target="_blank" rel="noopener"><img src="<?php echo $appstoreImg; ?>" class="h-10" alt="App Store"></a><?php endif; ?>
+				<?php if ($androidUrl): ?><a href="<?php echo htmlspecialchars($androidUrl); ?>" target="_blank" rel="noopener"><img src="<?php echo $playstoreImg; ?>" class="h-10" alt="Google Play"></a><?php endif; ?>
 			</div>
 		</div>
 	</div>

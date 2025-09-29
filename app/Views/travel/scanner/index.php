@@ -43,6 +43,42 @@ $currentPage = 'scanner';
                 </ul>
             </div>
 
+            <?php 
+            $androidUrl = \App\Models\Setting::get('apps.android_scanner_url', '');
+            $iosUrl = \App\Models\Setting::get('apps.ios_scanner_url', '');
+            $appstoreImg = base_url('/uploads/assets/appstore.png');
+            $playstoreImg = base_url('/uploads/assets/playstore.png');
+            ?>
+            <div class="mb-6 p-4 bg-gray-800/70 border border-gray-700 rounded-lg">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h3 class="font-semibold text-white mb-1">Get the Mobile Scanner App</h3>
+                        <p class="text-sm text-gray-400">Install our Android or iOS scanner for faster check-ins.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <?php if ($iosUrl): ?>
+                            <a href="<?php echo htmlspecialchars($iosUrl); ?>" target="_blank" rel="noopener" class="inline-block">
+                                <img src="<?php echo $appstoreImg; ?>" alt="Download on the App Store" class="h-10">
+                            </a>
+                        <?php else: ?>
+                            <span title="Coming soon" class="inline-block opacity-60 cursor-not-allowed">
+                                <img src="<?php echo $appstoreImg; ?>" alt="App Store (coming soon)" class="h-10">
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if ($androidUrl): ?>
+                            <a href="<?php echo htmlspecialchars($androidUrl); ?>" target="_blank" rel="noopener" class="inline-block">
+                                <img src="<?php echo $playstoreImg; ?>" alt="Get it on Google Play" class="h-10">
+                            </a>
+                        <?php else: ?>
+                            <span title="Coming soon" class="inline-block opacity-60 cursor-not-allowed">
+                                <img src="<?php echo $playstoreImg; ?>" alt="Google Play (coming soon)" class="h-10">
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
             <!-- Content -->
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 lg:p-6">
                 <?php if (empty($devices)): ?>
