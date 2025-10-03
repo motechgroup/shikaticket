@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  level VARCHAR(20) NOT NULL DEFAULT 'info',
+  category VARCHAR(64) NOT NULL,
+  ip VARCHAR(64) NULL,
+  user_agent VARCHAR(255) NULL,
+  user_id INT NULL,
+  role VARCHAR(32) NULL,
+  url VARCHAR(255) NULL,
+  message TEXT NOT NULL,
+  meta JSON NULL,
+  INDEX (level),
+  INDEX (category),
+  INDEX (occurred_at)
+) ENGINE=InnoDB;
+

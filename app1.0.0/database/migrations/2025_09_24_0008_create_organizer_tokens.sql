@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS organizer_tokens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  organizer_id INT UNSIGNED NOT NULL,
+  token VARCHAR(64) NOT NULL,
+  type VARCHAR(32) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX (organizer_id),
+  CONSTRAINT fk_organizer_tokens_org FOREIGN KEY (organizer_id) REFERENCES organizers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+

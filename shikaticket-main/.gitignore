@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# PHP vendors (if added later)
+vendor/
+composer.lock
+
+# Env / secrets
+.env
+.env.*
+
+# Logs
+storage/logs/
+*.log
+
+# Cache
+cache/
+bootstrap/cache/
+
+# Node
+node_modules/
+
+# Uploads
+public/uploads/
+!public/uploads/.gitkeep
+
+# Misc
+*.bak
+*.swp
+*.tmp

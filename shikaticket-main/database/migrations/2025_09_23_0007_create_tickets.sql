@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS tickets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_item_id INT UNSIGNED NOT NULL,
+  code VARCHAR(12) NOT NULL UNIQUE,
+  qr_path VARCHAR(255) NULL,
+  status ENUM('valid','redeemed') NOT NULL DEFAULT 'valid',
+  redeemed_at DATETIME NULL,
+  redeemed_by INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_tickets_item FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+

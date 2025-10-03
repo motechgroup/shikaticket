@@ -1,0 +1,2 @@
+-- Add paid_at column to travel_payments table (already exists)
+-- ALTER TABLE travel_payments ADD COLUMN paid_at DATETIME NULL AFTER created_at;

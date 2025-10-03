@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  organizer_id INT UNSIGNED NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(8) NOT NULL DEFAULT 'KES',
+  status ENUM('requested','approved','rejected','paid') NOT NULL DEFAULT 'requested',
+  notes VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_withdrawals_org FOREIGN KEY (organizer_id) REFERENCES organizers(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
