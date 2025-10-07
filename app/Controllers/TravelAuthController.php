@@ -203,6 +203,37 @@ class TravelAuthController
                         error_log('SMS sending error: ' . $e->getMessage());
                     }
                     
+                    // Send welcome email
+                    try {
+                        $siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
+                        $loginUrl = base_url('/travel/login');
+                        
+                        $html = \App\Services\EmailTemplates::render('travel_agency_welcome', [
+                            'name' => $data['contact_person'],
+                            'company_name' => $data['company_name'],
+                            'email' => $data['email'],
+                            'site_name' => $siteName,
+                            'login_url' => $loginUrl
+                        ]);
+                        
+                        if ($html !== '') {
+                            $subject = "Welcome to {$siteName} - Travel Agency Registration Successful";
+                            $mailer = new \App\Services\Mailer();
+                            if ($mailer->isConfigured()) {
+                                $emailSent = $mailer->send($data['email'], $subject, $html);
+                                if ($emailSent) {
+                                    error_log('Welcome email sent successfully to: ' . $data['email']);
+                                } else {
+                                    error_log('Welcome email failed to send to: ' . $data['email']);
+                                }
+                            } else {
+                                error_log('Email service not configured');
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        error_log('Welcome email sending error: ' . $e->getMessage());
+                    }
+                    
                     flash_set('success', 'Registration successful! Please enter the OTP sent to your phone.');
                     redirect(base_url('/travel/verify-otp'));
                 } else {

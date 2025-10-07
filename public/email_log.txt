@@ -19,3 +19,10 @@ From: ShikaTicket <hello@shikaticket.com>
 Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
 Time: 2025-10-07 20:46:20
 ---
+LOCAL DEV EMAIL:
+To: thegusiimusic7@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <motechgroupkenya@gmail.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 23:26:54
+---

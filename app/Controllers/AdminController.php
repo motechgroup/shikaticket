@@ -942,7 +942,45 @@ class AdminController
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
             db()->prepare('UPDATE travel_agencies SET is_approved = 1 WHERE id = ?')->execute([$id]);
-            flash_set('success', 'Agency approved.');
+            
+            // Send approval notification email
+            try {
+                $agencyStmt = db()->prepare('SELECT * FROM travel_agencies WHERE id = ?');
+                $agencyStmt->execute([$id]);
+                $agency = $agencyStmt->fetch();
+                
+                if ($agency) {
+                    $siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
+                    $loginUrl = base_url('/travel/login');
+                    
+                    $html = \App\Services\EmailTemplates::render('travel_agency_approved', [
+                        'name' => $agency['contact_person'],
+                        'company_name' => $agency['company_name'],
+                        'email' => $agency['email'],
+                        'site_name' => $siteName,
+                        'login_url' => $loginUrl
+                    ]);
+                    
+                    if ($html !== '') {
+                        $subject = "🎉 Congratulations! Your Travel Agency Has Been Approved - {$siteName}";
+                        $mailer = new \App\Services\Mailer();
+                        if ($mailer->isConfigured()) {
+                            $emailSent = $mailer->send($agency['email'], $subject, $html);
+                            if ($emailSent) {
+                                error_log('Travel agency approval email sent successfully to: ' . $agency['email']);
+                            } else {
+                                error_log('Travel agency approval email failed to send to: ' . $agency['email']);
+                            }
+                        } else {
+                            error_log('Email service not configured for travel agency approval notification');
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('Travel agency approval email sending error: ' . $e->getMessage());
+            }
+            
+            flash_set('success', 'Agency approved and notification sent.');
         }
         redirect(base_url('/admin/travel/agencies'));
     }
