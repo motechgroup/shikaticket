@@ -1,5 +1,6 @@
 <?php /** @var array $pages */ ?>
 <div class="max-w-6xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'Pages'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-semibold">Pages</h1>
         <a href="<?php echo base_url('/admin/pages/edit'); ?>" class="btn btn-primary">New Page</a>

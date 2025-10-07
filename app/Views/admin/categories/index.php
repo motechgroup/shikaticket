@@ -1,5 +1,6 @@
 <?php /** @var array $categories */ ?>
 <div class="max-w-6xl mx-auto px-4 py-8">
+	<?php $pageTitle = 'Categories'; include __DIR__ . '/../../components/mobile_nav_simple.php'; ?>
     <div class="card p-6">
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-semibold">Event Categories</h1>

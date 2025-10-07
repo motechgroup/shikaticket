@@ -1,5 +1,6 @@
 <?php /** @var array $templates */ ?>
 <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+	<?php $pageTitle = 'Notification Templates'; include __DIR__ . '/../../components/mobile_nav_simple.php'; ?>
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Notification Templates</h1>

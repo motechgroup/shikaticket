@@ -1,5 +1,6 @@
 <?php /** @var array $devices */ /** @var array $events */ /** @var array $destinations */ ?>
 <div class="max-w-5xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'Admin Scanners'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
 	<h1 class="text-2xl font-semibold mb-6">Admin Scanners</h1>
 	<form method="post" action="<?php echo base_url('/admin/scanners/create'); ?>" class="card p-4 mb-4">
 		<?php echo csrf_field(); ?>

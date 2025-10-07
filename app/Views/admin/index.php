@@ -1,16 +1,37 @@
 <?php /** @var array $orders */ /** @var array $byCurrency */ /** @var array $pendingWithdrawals */ ?>
 <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
-	<!-- Mobile Menu Button - Fallback -->
+		<!-- Mobile Navigation Header -->
 	<div class="md:hidden mb-4">
-		<button 
-			id="adminMobileToggleFallback" 
-			class="inline-flex items-center justify-center w-12 h-12 rounded-lg border-2 border-red-500 bg-red-900/60 text-white cursor-pointer"
-			onclick="toggleMobileMenu()">
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-			</svg>
-		</button>
-		<span class="ml-3 text-white text-sm">Admin Menu</span>
+		<div class="flex items-center gap-3">
+			<!-- Back Button (hidden by default, shown via JavaScript) -->
+			<button 
+				id="mobileBackButton" 
+				class="hidden inline-flex items-center justify-center w-12 h-12 rounded-lg border-2 border-gray-600 bg-gray-800/60 text-white cursor-pointer hover:bg-gray-700/60 transition-colors touch-target"
+				onclick="goBack()"
+				aria-label="Go back"
+				title="Go back">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+				</svg>
+			</button>
+			
+			<!-- Menu Button -->
+			<button 
+				id="adminMobileToggleFallback" 
+				class="inline-flex items-center justify-center w-12 h-12 rounded-lg border-2 border-red-500 bg-red-900/60 text-white cursor-pointer hover:bg-red-800/60 transition-colors touch-target"
+				onclick="toggleMobileMenu()"
+				aria-label="Open admin menu"
+				title="Open admin menu (Alt+M)">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+				</svg>
+			</button>
+			
+			<div class="flex-1">
+				<span class="text-white text-sm font-medium" id="mobilePageTitle">Admin Menu</span>
+				<kbd class="ml-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">Alt+M</kbd>
+			</div>
+		</div>
 	</div>
 	
 	<div class="flex items-center justify-between mb-4 md:mb-6">
@@ -573,21 +594,32 @@
 <!-- Mobile Menu Overlay -->
 <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
 	<div class="fixed inset-y-0 left-0 w-80 bg-gray-800 shadow-xl flex flex-col">
+		<!-- Header with logo and close button -->
 		<div class="p-4 border-b border-gray-700 flex-shrink-0">
-			<div class="flex items-center justify-between">
-				<h2 class="text-lg font-semibold text-white">Admin Menu</h2>
-				<button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+			<div class="flex items-center justify-between mb-3">
+				<div class="flex items-center gap-3">
+					<img src="<?php echo base_url('/uploads/site/logo.png'); ?>" alt="Ticko Logo" class="w-8 h-8 rounded-lg">
+					<h2 class="text-lg font-semibold text-white">Admin Panel</h2>
+				</div>
+				<button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors" aria-label="Close menu">
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 					</svg>
 				</button>
 			</div>
+			<!-- Quick search/filter -->
+			<div class="relative">
+				<input type="text" id="menuSearch" placeholder="Search menu..." class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
+				<svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+				</svg>
+			</div>
 		</div>
-		<nav class="flex-1 overflow-y-auto p-4 space-y-4">
+		<nav class="flex-1 overflow-y-auto p-4 space-y-4" id="mobileNav">
 			<!-- Dashboard -->
-			<div class="space-y-1">
-				<a href="<?php echo base_url('/admin'); ?>" class="flex items-center gap-3 px-4 py-3 bg-red-600 text-white rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="space-y-1 menu-section" data-section="dashboard">
+				<a href="<?php echo base_url('/admin'); ?>" class="flex items-center gap-3 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" data-menu-text="dashboard">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
 					</svg>
@@ -596,24 +628,24 @@
 			</div>
 
 			<!-- Users & Partners -->
-			<div class="space-y-1">
+			<div class="space-y-1 menu-section" data-section="users-partners">
 				<div class="px-3 py-1">
 					<h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Users & Partners</h3>
 				</div>
-				<a href="<?php echo base_url('/admin/users'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/users'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="users">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
 					</svg>
 					<span>Users</span>
 				</a>
-				<a href="<?php echo base_url('/admin/organizers'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/organizers'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="organizers">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
 					</svg>
 					<span>Organizers</span>
 				</a>
-				<a href="<?php echo base_url('/admin/accounts/create'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/accounts/create'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="create accounts">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
 					</svg>
 					<span>Create Accounts</span>
@@ -621,24 +653,24 @@
 			</div>
 
 			<!-- Events & Content -->
-			<div class="space-y-1">
+			<div class="space-y-1 menu-section" data-section="events-content">
 				<div class="px-3 py-1">
 					<h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Events & Content</h3>
 				</div>
-				<a href="<?php echo base_url('/admin/events'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/events'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="events">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 					</svg>
 					<span>Events</span>
 				</a>
-				<a href="<?php echo base_url('/admin/categories'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/categories'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="categories">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
 					</svg>
 					<span>Categories</span>
 				</a>
-				<a href="<?php echo base_url('/admin/banners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/banners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="banners">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 					</svg>
 					<span>Banners</span>
@@ -683,37 +715,37 @@
 			</div>
 
 			<!-- Travel -->
-			<div class="space-y-1">
+			<div class="space-y-1 menu-section" data-section="travel">
 				<div class="px-3 py-1">
 					<h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Travel</h3>
 				</div>
-				<a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/travel/agencies'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="travel agencies">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 					</svg>
 					<span>Travel Agencies</span>
 				</a>
-				<a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/travel/destinations'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="travel destinations">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
 					</svg>
 					<span>Travel Destinations</span>
 				</a>
-				<a href="<?php echo base_url('/admin/travel/scanners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/travel/scanners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="travel scanners">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
 					</svg>
 					<span>Travel Scanners</span>
 				</a>
-				<a href="<?php echo base_url('/admin/travel/scanners/assignments'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/travel/scanners/assignments'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="assign travel scanners">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
 					</svg>
 					<span>Assign Travel Scanners</span>
 				</a>
-				<a href="<?php echo base_url('/admin/travel-banners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<a href="<?php echo base_url('/admin/travel-banners'); ?>" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors" data-menu-text="travel banners">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 					</svg>
 					<span>Travel Banners</span>
@@ -824,33 +856,439 @@
 	</div>
 </div>
 
-<script>
-function toggleMobileMenu() {
-	const overlay = document.getElementById('mobileMenuOverlay');
-	if (overlay.classList.contains('hidden')) {
-		overlay.classList.remove('hidden');
-		document.body.style.overflow = 'hidden';
-	} else {
-		overlay.classList.add('hidden');
-		document.body.style.overflow = '';
+<style>
+/* Enhanced mobile navigation styles */
+.touch-target {
+	min-height: 44px;
+	min-width: 44px;
+}
+
+#mobileMenuOverlay {
+	backdrop-filter: blur(4px);
+}
+
+#menuSearch:focus {
+	transform: scale(1.02);
+	transition: transform 0.2s ease;
+}
+
+[data-menu-text]:focus {
+	outline: 2px solid #ef4444;
+	outline-offset: 2px;
+}
+
+/* Smooth transitions for menu items */
+[data-menu-text] {
+	transition: all 0.2s ease;
+}
+
+[data-menu-text]:hover {
+	transform: translateX(4px);
+}
+
+/* Keyboard shortcut styling */
+kbd {
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+/* Search input enhancements */
+#menuSearch::placeholder {
+	transition: opacity 0.2s ease;
+}
+
+#menuSearch:focus::placeholder {
+	opacity: 0.5;
+}
+
+/* Mobile swipe indicator */
+@media (max-width: 767px) {
+	#mobileMenuOverlay::after {
+		content: '← Swipe left to close';
+		position: absolute;
+		top: 50%;
+		right: 20px;
+		transform: translateY(-50%);
+		background: rgba(0, 0, 0, 0.8);
+		color: white;
+		padding: 8px 12px;
+		border-radius: 8px;
+		font-size: 12px;
+		opacity: 0.7;
+		pointer-events: none;
+		animation: fadeInOut 3s ease-in-out;
 	}
 }
 
-// Close menu when clicking overlay
-document.getElementById('mobileMenuOverlay').addEventListener('click', function(e) {
-	if (e.target === this) {
-		toggleMobileMenu();
-	}
-});
+@keyframes fadeInOut {
+	0%, 100% { opacity: 0; }
+	20%, 80% { opacity: 0.7; }
+}
 
-// Close menu on escape key
-document.addEventListener('keydown', function(e) {
-	if (e.key === 'Escape') {
-		const overlay = document.getElementById('mobileMenuOverlay');
-		if (!overlay.classList.contains('hidden')) {
-			toggleMobileMenu();
+/* Back navigation enhancements */
+#mobileBackButton {
+	transition: all 0.3s ease;
+}
+
+#mobileBackButton:hover {
+	transform: translateX(-2px);
+}
+
+#mobileBackButton:active {
+	transform: scale(0.95);
+}
+
+/* Mobile navigation header */
+.mobile-back-nav {
+	background: linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9));
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(75, 85, 99, 0.3);
+	border-radius: 12px;
+	padding: 8px 12px;
+	margin-bottom: 16px;
+}
+
+/* Smooth transitions for page title */
+#mobilePageTitle {
+	transition: all 0.2s ease;
+}
+
+/* Enhanced keyboard shortcut styling */
+kbd {
+	background: linear-gradient(145deg, #374151, #1f2937);
+	border: 1px solid #4b5563;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+</style>
+
+<script>
+function toggleMobileMenu() {
+	const overlay = document.getElementById('mobileMenuOverlay');
+	const searchInput = document.getElementById('menuSearch');
+	
+	if (overlay.classList.contains('hidden')) {
+		overlay.classList.remove('hidden');
+		document.body.style.overflow = 'hidden';
+		
+		// Focus search input when menu opens
+		setTimeout(() => {
+			if (searchInput) {
+				searchInput.focus();
+			}
+		}, 100);
+	} else {
+		overlay.classList.add('hidden');
+		document.body.style.overflow = '';
+		
+		// Clear search when closing
+		if (searchInput) {
+			searchInput.value = '';
+			filterMenuItems('');
 		}
 	}
+}
+
+// Enhanced search functionality
+function filterMenuItems(searchTerm) {
+	const menuItems = document.querySelectorAll('[data-menu-text]');
+	const sections = document.querySelectorAll('.menu-section');
+	
+	const term = searchTerm.toLowerCase().trim();
+	
+	menuItems.forEach(item => {
+		const text = item.getAttribute('data-menu-text').toLowerCase();
+		const parentSection = item.closest('.menu-section');
+		
+		if (term === '' || text.includes(term)) {
+			item.style.display = 'flex';
+			if (parentSection) {
+				parentSection.style.display = 'block';
+			}
+		} else {
+			item.style.display = 'none';
+			// Hide section if no visible items
+			if (parentSection) {
+				const visibleItems = parentSection.querySelectorAll('[data-menu-text]:not([style*="display: none"])');
+				if (visibleItems.length === 0) {
+					parentSection.style.display = 'none';
+				}
+			}
+		}
+	});
+	
+	// Show/hide section headers based on search
+	const sectionHeaders = document.querySelectorAll('h3');
+	sectionHeaders.forEach(header => {
+		const section = header.closest('.menu-section');
+		if (section && section.style.display === 'none') {
+			header.style.display = 'none';
+		} else {
+			header.style.display = 'block';
+		}
+	});
+}
+
+// Keyboard navigation
+function handleKeyboardNavigation(e) {
+	const menuItems = document.querySelectorAll('[data-menu-text]:not([style*="display: none"])');
+	const currentIndex = Array.from(menuItems).indexOf(document.activeElement);
+	
+	switch(e.key) {
+		case 'ArrowDown':
+			e.preventDefault();
+			const nextIndex = (currentIndex + 1) % menuItems.length;
+			menuItems[nextIndex]?.focus();
+			break;
+		case 'ArrowUp':
+			e.preventDefault();
+			const prevIndex = currentIndex <= 0 ? menuItems.length - 1 : currentIndex - 1;
+			menuItems[prevIndex]?.focus();
+			break;
+		case 'Enter':
+		case ' ':
+			if (e.target.tagName === 'A') {
+				e.target.click();
+			}
+			break;
+		case 'Escape':
+			toggleMobileMenu();
+			break;
+	}
+}
+
+// Initialize enhanced navigation
+document.addEventListener('DOMContentLoaded', function() {
+	const overlay = document.getElementById('mobileMenuOverlay');
+	const searchInput = document.getElementById('menuSearch');
+	const menuItems = document.querySelectorAll('[data-menu-text]');
+	
+	// Add data attributes for search
+	menuItems.forEach(item => {
+		const text = item.querySelector('span')?.textContent?.toLowerCase() || '';
+		item.setAttribute('data-menu-text', text);
+		item.setAttribute('tabindex', '0');
+		item.setAttribute('role', 'menuitem');
+		
+		// Add click tracking for back navigation
+		item.addEventListener('click', function() {
+			const pageTitle = this.querySelector('span')?.textContent || 'Admin';
+			sessionStorage.setItem('mobileAdminLastPage', pageTitle);
+			sessionStorage.setItem('mobileAdminLastUrl', window.location.href);
+		});
+	});
+	
+	// Search functionality
+	if (searchInput) {
+		searchInput.addEventListener('input', function(e) {
+			filterMenuItems(e.target.value);
+		});
+		
+		searchInput.addEventListener('keydown', function(e) {
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				const firstMenuItem = document.querySelector('[data-menu-text]:not([style*="display: none"])');
+				firstMenuItem?.focus();
+			}
+		});
+	}
+	
+	// Keyboard navigation for menu items
+	menuItems.forEach(item => {
+		item.addEventListener('keydown', handleKeyboardNavigation);
+	});
+	
+	// Close menu when clicking overlay
+	overlay.addEventListener('click', function(e) {
+		if (e.target === this) {
+			toggleMobileMenu();
+		}
+	});
+	
+	// Global keyboard shortcuts
+	document.addEventListener('keydown', function(e) {
+		// Alt + M to toggle menu
+		if (e.altKey && e.key === 'm') {
+			e.preventDefault();
+			toggleMobileMenu();
+		}
+		
+		// Escape to close menu
+		if (e.key === 'Escape') {
+			if (!overlay.classList.contains('hidden')) {
+				toggleMobileMenu();
+			}
+		}
+	});
+	
+	// Touch/swipe gestures for mobile
+	let startX = 0;
+	let startY = 0;
+	
+	overlay.addEventListener('touchstart', function(e) {
+		startX = e.touches[0].clientX;
+		startY = e.touches[0].clientY;
+	});
+	
+	overlay.addEventListener('touchend', function(e) {
+		const endX = e.changedTouches[0].clientX;
+		const endY = e.changedTouches[0].clientY;
+		const diffX = startX - endX;
+		const diffY = startY - endY;
+		
+		// Swipe left to close menu
+		if (Math.abs(diffX) > Math.abs(diffY) && diffX > 50) {
+			toggleMobileMenu();
+		}
+	});
+	
+	// Auto-close menu when clicking outside
+	document.addEventListener('click', function(e) {
+		if (!overlay.classList.contains('hidden') && 
+			!overlay.contains(e.target) && 
+			!document.getElementById('adminMobileToggleFallback')?.contains(e.target)) {
+			toggleMobileMenu();
+		}
+	});
+});
+
+// Accessibility improvements
+document.addEventListener('DOMContentLoaded', function() {
+	// Add ARIA attributes
+	const overlay = document.getElementById('mobileMenuOverlay');
+	const nav = document.getElementById('mobileNav');
+	
+	if (overlay) {
+		overlay.setAttribute('role', 'dialog');
+		overlay.setAttribute('aria-modal', 'true');
+		overlay.setAttribute('aria-label', 'Admin navigation menu');
+	}
+	
+	if (nav) {
+		nav.setAttribute('role', 'menu');
+		nav.setAttribute('aria-label', 'Admin menu items');
+	}
+	
+	// Announce menu state changes
+	const observer = new MutationObserver(function(mutations) {
+		mutations.forEach(function(mutation) {
+			if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+				const isHidden = overlay.classList.contains('hidden');
+				// You could add screen reader announcements here
+				console.log('Menu state changed:', isHidden ? 'closed' : 'open');
+			}
+		});
+	});
+	
+	observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+});
+
+// Mobile back navigation functionality
+function goBack() {
+	const lastUrl = sessionStorage.getItem('mobileAdminLastUrl');
+	if (lastUrl && lastUrl !== window.location.href) {
+		window.location.href = lastUrl;
+	} else {
+		// Fallback to dashboard if no previous page
+		window.location.href = '<?php echo base_url('/admin'); ?>';
+	}
+}
+
+// Check if we should show back button
+function checkMobileNavigationState() {
+	const isMobile = window.innerWidth <= 768;
+	const currentUrl = window.location.href;
+	const isDashboard = currentUrl.includes('/admin') && !currentUrl.includes('/admin/') || currentUrl.endsWith('/admin');
+	
+	if (isMobile) {
+		const backButton = document.getElementById('mobileBackButton');
+		const pageTitle = document.getElementById('mobilePageTitle');
+		
+		if (!isDashboard) {
+			// Show back button and update page title
+			backButton.classList.remove('hidden');
+			const lastPage = sessionStorage.getItem('mobileAdminLastPage') || 'Dashboard';
+			if (pageTitle) {
+				pageTitle.textContent = getCurrentPageTitle();
+			}
+		} else {
+			// Hide back button and show menu title
+			backButton.classList.add('hidden');
+			if (pageTitle) {
+				pageTitle.textContent = 'Admin Menu';
+			}
+		}
+	}
+}
+
+// Get current page title based on URL
+function getCurrentPageTitle() {
+	const currentUrl = window.location.href;
+	const urlParts = currentUrl.split('/');
+	const lastPart = urlParts[urlParts.length - 1];
+	
+	// Map URLs to page titles
+	const pageTitles = {
+		'users': 'Users',
+		'organizers': 'Organizers',
+		'events': 'Events',
+		'categories': 'Categories',
+		'banners': 'Banners',
+		'pages': 'Pages',
+		'featured-content': 'Featured Content',
+		'notification-templates': 'Notification Templates',
+		'partners': 'Partners',
+		'partner-logos': 'Partner Logos',
+		'travel': 'Travel',
+		'agencies': 'Travel Agencies',
+		'destinations': 'Travel Destinations',
+		'scanners': 'Travel Scanners',
+		'assignments': 'Scanner Assignments',
+		'travel-banners': 'Travel Banners',
+		'hotels': 'Hotel Applications',
+		'email-templates': 'Email Templates',
+		'sms-templates': 'SMS Templates',
+		'communications': 'Communications',
+		'points': 'Loyalty Points',
+		'scans': 'Scans',
+		'withdrawals': 'Withdrawals',
+		'finance': 'Finance',
+		'settings': 'Settings',
+		'profile': 'My Profile'
+	};
+	
+	// Check for specific patterns
+	if (currentUrl.includes('/admin/travel/agencies')) return 'Travel Agencies';
+	if (currentUrl.includes('/admin/travel/destinations')) return 'Travel Destinations';
+	if (currentUrl.includes('/admin/travel/scanners')) return 'Travel Scanners';
+	if (currentUrl.includes('/admin/travel/scanners/assignments')) return 'Scanner Assignments';
+	if (currentUrl.includes('/admin/accounts/create')) return 'Create Accounts';
+	
+	return pageTitles[lastPart] || 'Admin Page';
+}
+
+// Initialize mobile navigation state
+document.addEventListener('DOMContentLoaded', function() {
+	checkMobileNavigationState();
+	
+	// Update on window resize
+	window.addEventListener('resize', checkMobileNavigationState);
+	
+	// Update page title when navigating
+	window.addEventListener('popstate', checkMobileNavigationState);
+});
+
+// Enhanced mobile menu links to track navigation
+document.addEventListener('DOMContentLoaded', function() {
+	const menuLinks = document.querySelectorAll('#mobileNav a[href]');
+	
+	menuLinks.forEach(link => {
+		link.addEventListener('click', function() {
+			const pageTitle = this.querySelector('span')?.textContent || 'Admin';
+			sessionStorage.setItem('mobileAdminLastPage', pageTitle);
+			sessionStorage.setItem('mobileAdminLastUrl', this.href);
+		});
+	});
 });
 </script>
 

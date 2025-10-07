@@ -2,9 +2,10 @@
 <?php /** @var array $featuredDestinations */ ?>
 <?php /** @var array $pendingRequests */ ?>
 <?php /** @var array $featureRequests */ ?>
-<?php $pageTitle = 'Featured Content Management'; ?>
+<?php $pageTitle = 'Featured Content'; ?>
 
 <div class="max-w-7xl mx-auto px-4 py-8">
+	<?php include __DIR__ . '/../../components/mobile_nav_simple.php'; ?>
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-white mb-2">Featured Content Management</h1>
         <p class="text-gray-400">Manage featured events and travel destinations with commission tracking</p>

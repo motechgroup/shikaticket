@@ -1,6 +1,7 @@
 <?php /** @var array $entries */ ?>
 <?php /** @var array $config */ ?>
 <div class="max-w-6xl mx-auto px-4 py-8">
+	<?php $pageTitle = 'Loyalty Points'; include __DIR__ . '/../../components/mobile_nav_simple.php'; ?>
     <div class="card p-6 mb-6">
         <h1 class="text-xl font-semibold mb-4">Loyalty Points</h1>
         <div class="mb-6">

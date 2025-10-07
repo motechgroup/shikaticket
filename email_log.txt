@@ -1,0 +1,14 @@
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Test Email from Web Environment - 2025-10-07 20:41:58
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>🎉 Web Environment Test</h1><p>This email was processed in web environment.</p>
+Time: 2025-10-07 20:41:58
+---
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Current Test - 2025-10-07 20:47:32
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>Current Test</h1><p>Testing current email behavior.</p>
+Time: 2025-10-07 20:47:32
+---

@@ -1,5 +1,6 @@
 <?php /** @var array $partners */ ?>
 <div class="max-w-6xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'Partners'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <h1 class="text-2xl font-semibold mb-6">Partners</h1>
     <div class="card p-4">
         <?php if (empty($partners)): ?>

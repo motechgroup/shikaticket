@@ -1,4 +1,5 @@
 <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+	<?php $pageTitle = 'Hotel Applications'; include __DIR__ . '/../../components/mobile_nav_simple.php'; ?>
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>

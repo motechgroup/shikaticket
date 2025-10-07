@@ -129,35 +129,59 @@
 		@media (min-width: 768px){ .main-with-sidebar{ margin-left:18rem; } }
 		
 		/* Mobile-First Responsive Design */
+		.main-with-sidebar { margin-left: 0; }
+		.mobile-sidebar-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			z-index: 39;
+			display: none;
+		}
+		.mobile-sidebar-overlay.active {
+			display: block;
+		}
+		.sidebar-mobile {
+			position: fixed;
+			top: 0;
+			left: -100%;
+			width: 280px;
+			height: 100vh;
+			background: #0d0d0d;
+			border-right: 1px solid #374151;
+			z-index: 40;
+			transition: left 0.3s ease;
+		}
+		.sidebar-mobile.active {
+			left: 0;
+		}
+		
+		/* Hide mobile sidebar on desktop */
+		@media (min-width: 768px) {
+			.sidebar-mobile {
+				display: none !important;
+			}
+			.mobile-sidebar-overlay {
+				display: none !important;
+			}
+			#adminMobileToggle {
+				display: none !important;
+			}
+		}
+		
+		/* Ensure admin mobile toggle is always visible on mobile */
+		@media (max-width: 767px) {
+			#adminMobileToggle {
+				display: block !important;
+				visibility: visible !important;
+				opacity: 1 !important;
+			}
+		}
+		
 		@media (max-width: 767px) {
 			.main-with-sidebar { margin-left: 0; }
-			.mobile-sidebar-overlay {
-				position: fixed;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				background: rgba(0, 0, 0, 0.5);
-				z-index: 39;
-				display: none;
-			}
-			.mobile-sidebar-overlay.active {
-				display: block;
-			}
-			.sidebar-mobile {
-				position: fixed;
-				top: 0;
-				left: -100%;
-				width: 280px;
-				height: 100vh;
-				background: #0d0d0d;
-				border-right: 1px solid #374151;
-				z-index: 40;
-				transition: left 0.3s ease;
-			}
-			.sidebar-mobile.active {
-				left: 0;
-			}
 			/* Mobile-friendly tables */
 			.table-responsive {
 				overflow-x: auto;
@@ -190,16 +214,17 @@
 </head>
 <body class="min-h-screen flex flex-col">
 <?php 
-// Debug: Check if we're in admin area
+// Check if we're in admin area - ALWAYS show admin sidebar on admin pages
 $currentUri = $_SERVER['REQUEST_URI'] ?? '';
 $currentRole = $_SESSION['role'] ?? 'none';
 $isInAdminPath = strpos($currentUri, '/admin') !== false;
 $hasAdminRole = in_array($currentRole, ['admin', 'manager', 'accountant']);
-$isAdminSidebar = $isInAdminPath && $hasAdminRole;
+$isAdminSidebar = $isInAdminPath; // Always show admin sidebar on admin pages
 
-// Debug output (remove after testing)
+// Force admin sidebar to be true when on admin pages
 if ($isInAdminPath) {
-    error_log("Admin Debug - URI: $currentUri, Role: $currentRole, Has Role: " . ($hasAdminRole ? 'yes' : 'no') . ", Sidebar: " . ($isAdminSidebar ? 'yes' : 'no'));
+    $isAdminSidebar = true;
+    error_log("Admin Debug - URI: $currentUri, Role: $currentRole, Sidebar: YES (forced)");
 }
 ?>
 <?php $isOrganizerSidebar = (strpos($_SERVER['REQUEST_URI'] ?? '', '/organizer') !== false) && isset($_SESSION['organizer_id']); ?>
@@ -208,7 +233,7 @@ if ($isInAdminPath) {
     <div id="mobileSidebarOverlay" class="mobile-sidebar-overlay"></div>
     
     <!-- Mobile Sidebar -->
-    <aside id="mobileSidebar" class="sidebar-mobile md:hidden">
+    <aside id="mobileSidebar" class="sidebar-mobile">
         <div class="h-full flex flex-col">
             <div class="px-4 py-3 flex items-center justify-between border-b border-gray-800">
                 <div class="flex items-center gap-3">
@@ -1046,21 +1071,20 @@ if ($isInAdminPath) {
             </button>
             
             <?php if ($isAdminSidebar): ?>
-            <!-- Mobile Admin Menu Toggle -->
+            <!-- Mobile Admin Menu Toggle - ALWAYS SHOW ON ADMIN PAGES -->
             <button 
                 id="adminMobileToggle" 
                 type="button"
-                class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border-2 border-red-500 hover:border-red-600 bg-red-900/60 backdrop-blur-sm touch-target cursor-pointer" 
-                style="pointer-events: auto !important; z-index: 9999 !important; position: relative; touch-action: manipulation !important;"
+                class="inline-flex items-center justify-center w-10 h-10 rounded-lg border-2 border-red-500 hover:border-red-600 bg-red-900/60 backdrop-blur-sm touch-target cursor-pointer" 
+                style="pointer-events: auto !important; z-index: 9999 !important; position: relative; touch-action: manipulation !important; display: block !important;"
                 aria-label="Toggle admin menu" 
                 aria-expanded="false"
-                title="Admin Menu (Role: <?php echo $currentRole; ?>)">
+                title="Admin Mobile Menu">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
             <?php else: ?>
-            <!-- DEBUG: Not showing admin menu. URI: <?php echo htmlspecialchars($currentUri); ?>, Role: <?php echo htmlspecialchars($currentRole); ?>, InPath: <?php echo $isInAdminPath ? 'Y' : 'N'; ?>, HasRole: <?php echo $hasAdminRole ? 'Y' : 'N'; ?> -->
             <!-- Regular Mobile Menu Toggle -->
             <button id="navToggle" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-700 hover:border-red-600 bg-[#0f0f10]/60 backdrop-blur-sm touch-target" aria-label="Toggle menu" aria-expanded="false">
                 <span id="bar1" class="block w-6 h-0.5 bg-gray-200 transition-transform duration-200 ease-out"></span>
@@ -1142,7 +1166,7 @@ if ($isInAdminPath) {
     <footer class="w-full px-4 py-3 text-xs text-gray-400 border-t border-gray-800 bg-[#0d0d0d]<?php echo ($isAdminSidebar || $isOrganizerSidebar) ? ' main-with-sidebar' : ''; ?>">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <span>Admin Panel</span>
-            <span>Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.2'; ?></span>
+            <span>Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.3'; ?></span>
         </div>
     </footer>
     <?php endif; ?>
@@ -1191,6 +1215,25 @@ document.addEventListener('DOMContentLoaded', function(){
     overlay: !!overlay,
     closeButton: !!closeButton
   });
+  
+  // Additional debugging
+  if (adminToggle) {
+    console.log('✅ Admin toggle button found:', adminToggle);
+    console.log('Admin toggle button classes:', adminToggle.className);
+    console.log('Admin toggle button style:', adminToggle.style.cssText);
+    console.log('Admin toggle button visible:', adminToggle.offsetParent !== null);
+    console.log('Admin toggle button display:', window.getComputedStyle(adminToggle).display);
+  } else {
+    console.log('❌ Admin toggle button NOT found!');
+    console.log('Current URI:', window.location.pathname);
+    console.log('Is admin path:', window.location.pathname.includes('/admin'));
+  }
+  
+  if (mobileSidebar) {
+    console.log('Mobile sidebar found:', mobileSidebar);
+  } else {
+    console.log('❌ Mobile sidebar NOT found!');
+  }
   
   // Force button to be clickable
   if(adminToggle) {
@@ -1440,7 +1483,7 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
 
             <div class="border-t border-gray-800 mt-8 pt-4 text-sm flex items-center justify-between flex-wrap gap-3">
-                <span>© <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteTitle); ?>. All rights reserved. • Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.2'; ?></span>
+                <span>© <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteTitle); ?>. All rights reserved. • Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.3'; ?></span>
                 
                 <!-- Social Media Links -->
                 <?php if (!empty($fb) || !empty($tw) || !empty($ig)): ?>

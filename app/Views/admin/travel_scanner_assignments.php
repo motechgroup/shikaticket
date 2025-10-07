@@ -1,5 +1,6 @@
 <?php /** @var array $destinations */ /** @var array $devices */ ?>
 <div class="max-w-5xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'Scanner Assignments'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <h1 class="text-2xl font-semibold mb-6">Assign Travel Scanners to Destinations</h1>
     <div class="grid md:grid-cols-2 gap-4">
         <div class="card p-4">

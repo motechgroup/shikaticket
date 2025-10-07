@@ -1,0 +1,21 @@
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:42:43
+---
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:45:24
+---
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:46:20
+---

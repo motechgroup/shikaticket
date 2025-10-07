@@ -1,5 +1,6 @@
 <?php /** @var array $banners */ ?>
 <div class="max-w-7xl mx-auto px-4 py-8">
+	<?php $pageTitle = 'Travel Banners'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Travel Banners</h1>
         <a href="<?php echo base_url('/admin/travel-banners/create'); ?>" class="btn btn-primary">Create Banner</a>

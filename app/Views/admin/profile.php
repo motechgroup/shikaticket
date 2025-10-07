@@ -1,5 +1,6 @@
 <?php /** @var string $email */ ?>
 <div class="max-w-3xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'My Profile'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <h1 class="text-2xl font-semibold mb-6">Admin Profile</h1>
     <?php if ($msg = flash_get('success')): ?><div class="alert-success px-4 py-3 mb-3"><?php echo htmlspecialchars($msg); ?></div><?php endif; ?>
     <form method="post" action="<?php echo base_url('/admin/profile'); ?>" class="card p-6 space-y-4">

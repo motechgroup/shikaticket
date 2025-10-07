@@ -1,4 +1,5 @@
 <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+	<?php $pageTitle = 'Withdrawals'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
 	<!-- Mobile-friendly header -->
 	<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 md:mb-6">
 		<h1 class="text-xl md:text-2xl font-semibold">Withdrawals Management</h1>

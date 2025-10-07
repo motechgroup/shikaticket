@@ -1,5 +1,6 @@
 <?php /** @var array $templates */ ?>
 <div class="max-w-4xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'SMS Templates'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
     <h1 class="text-2xl font-semibold mb-6">SMS Templates</h1>
     <form method="post" action="<?php echo base_url('/admin/sms-templates'); ?>" class="space-y-6 card p-6">
         <?php echo csrf_field(); ?>

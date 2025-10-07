@@ -1,5 +1,6 @@
 <?php /** @var array $scans */ ?>
 <div class="max-w-6xl mx-auto px-4 py-10">
+	<?php $pageTitle = 'Scans'; include __DIR__ . '/../components/mobile_nav_simple.php'; ?>
 	<h1 class="text-2xl font-semibold mb-6">Scan Activity</h1>
 	<div class="card p-0">
 		<?php if (empty($scans)): ?>

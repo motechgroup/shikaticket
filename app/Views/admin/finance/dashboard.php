@@ -6,7 +6,8 @@
 /** @var array $commissionStats */
 /** @var string $startDate */
 /** @var string $endDate */
-$pageTitle = 'Finance Dashboard';
+$pageTitle = 'Finance';
+include __DIR__ . '/../../components/mobile_nav_simple.php';
 ?>
 
 <div class="max-w-7xl mx-auto px-4 py-8">
