@@ -1760,10 +1760,20 @@ class AdminController
 		$templates = [
 			'user_welcome' => Setting::get('email.user_welcome', ''),
 			'organizer_approved' => Setting::get('email.organizer_approved', ''),
-			'password_reset' => Setting::get('email.password_reset', ''),
-			'verify_email' => Setting::get('email.verify_email', ''),
+			'travel_agency_welcome' => Setting::get('email.travel_agency_welcome', ''),
+			'travel_agency_approved' => Setting::get('email.travel_agency_approved', ''),
+			'password_reset_user' => Setting::get('email.password_reset_user', ''),
+			'password_reset_travel' => Setting::get('email.password_reset_travel', ''),
+			'password_reset_organizer' => Setting::get('email.password_reset_organizer', ''),
+			'email_verification' => Setting::get('email.email_verification', ''),
 			'ticket_confirmation' => Setting::get('email.ticket_confirmation', ''),
 			'order_receipt' => Setting::get('email.order_receipt', ''),
+			'destination_booking_confirmation' => Setting::get('email.destination_booking_confirmation', ''),
+			'withdrawal_request' => Setting::get('email.withdrawal_request', ''),
+			'withdrawal_status_update' => Setting::get('email.withdrawal_status_update', ''),
+			'event_reminder' => Setting::get('email.event_reminder', ''),
+			'payment_reminder' => Setting::get('email.payment_reminder', ''),
+			'event_cancellation' => Setting::get('email.event_cancellation', ''),
 		];
 		view('admin/email_templates', compact('templates'));
 	}
@@ -1833,13 +1843,22 @@ class AdminController
 	public function saveEmailTemplates(): void
 	{
 		require_admin();
-		Setting::set('email.user_welcome', $_POST['user_welcome'] ?? '');
-		Setting::set('email.organizer_approved', $_POST['organizer_approved'] ?? '');
-		Setting::set('email.password_reset', $_POST['password_reset'] ?? '');
-		Setting::set('email.verify_email', $_POST['verify_email'] ?? '');
-		Setting::set('email.ticket_confirmation', $_POST['ticket_confirmation'] ?? '');
-		Setting::set('email.order_receipt', $_POST['order_receipt'] ?? '');
-		flash_set('success', 'Email templates saved.');
+		verify_csrf();
+		
+		// Save all email templates
+		$templateKeys = [
+			'user_welcome', 'organizer_approved', 'travel_agency_welcome', 'travel_agency_approved',
+			'password_reset_user', 'password_reset_travel', 'password_reset_organizer',
+			'email_verification', 'ticket_confirmation', 'order_receipt',
+			'destination_booking_confirmation', 'withdrawal_request', 'withdrawal_status_update',
+			'event_reminder', 'payment_reminder', 'event_cancellation'
+		];
+		
+		foreach ($templateKeys as $key) {
+			Setting::set('email.' . $key, $_POST[$key] ?? '');
+		}
+		
+		flash_set('success', 'All email templates saved successfully.');
 		redirect(base_url('/admin/email-templates'));
 	}
 
