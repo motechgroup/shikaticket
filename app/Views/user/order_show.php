@@ -46,8 +46,7 @@
                                     <?php endif; ?>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <button class="btn btn-secondary text-xs" data-ticket-code="<?php echo htmlspecialchars($t['code']); ?>" data-ticket-qr="<?php echo base_url('/'.($t['qr_path'] ?? '')); ?>">Download PDF</button>
-                                    <a class="btn btn-secondary text-xs" href="<?php echo base_url('/tickets/download?code=' . urlencode($t['code'])); ?>">Server download</a>
+                                    <a class="btn btn-primary text-xs" href="<?php echo base_url('/tickets/download?code=' . urlencode($t['code'])); ?>">Download PDF</a>
                                 </div>
 							</div>
 						</div>
@@ -73,59 +72,7 @@
 	</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
-(function(){
-  const { jsPDF } = window.jspdf || {};
-  function bySelAll(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
-  function isMobile(){ return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
-  bySelAll('[data-ticket-code]').forEach(function(btn){
-    btn.addEventListener('click', async function(){
-      if(!jsPDF) return;
-      const code = this.getAttribute('data-ticket-code');
-      const qr = this.getAttribute('data-ticket-qr');
-      const doc = new jsPDF({ unit:'pt', format:'a4' });
-      const pageW = doc.internal.pageSize.getWidth();
-      const margin = 40;
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(18);
-      doc.text('Ticket #'+code, margin, 60);
-      // QR
-      try {
-        const img = await fetch(qr).then(r=>r.blob()).then(b=>new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b); }));
-        const imgW = 300, imgH = 300;
-        doc.addImage(img, 'PNG', margin, 90, imgW, imgH);
-      } catch(e) {}
-      doc.setFont('helvetica','');
-      doc.setFontSize(12);
-      doc.text('Present this code and QR at entry.', margin, 420);
-      const fileName = 'ticket-'+code+'.pdf';
-      try {
-        // Desktop browsers
-        if(!isMobile()) {
-          doc.save(fileName);
-        } else {
-          // Mobile-friendly: open in new tab or trigger download via anchor
-          const blob = doc.output('blob');
-          const url = URL.createObjectURL(blob);
-          // Try opening in a new tab (lets user download from viewer)
-          const win = window.open(url, '_blank');
-          if (!win) {
-            // Fallback: programmatic download
-            const a = document.createElement('a');
-            a.href = url; a.download = fileName; a.style.display='none';
-            document.body.appendChild(a); a.click(); a.remove();
-          }
-          // Revoke after a while
-          setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
-        }
-      } catch(e) {
-        try { doc.save(fileName); } catch(_) {}
-      }
-    });
-  });
-})();
-
 // Payment success popup for regular orders
 function showPaymentSuccessPopup() {
     const popup = document.createElement('div');

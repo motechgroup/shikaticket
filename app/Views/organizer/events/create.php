@@ -10,16 +10,11 @@
 			</div>
 			<div>
 				<label class="block text-sm mb-1">Category</label>
+				<?php $cats = []; try { $cats = db()->query('SELECT name FROM event_categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC')->fetchAll(); } catch (\PDOException $e) { $cats = []; } ?>
 				<select name="category" class="select">
-					<option value="music">Music</option>
-					<option value="sports">Sports</option>
-					<option value="movie">Movie</option>
-					<option value="fashion">Fashion</option>
-					<option value="awards">Awards</option>
-					<option value="corporate">Corporate</option>
-					<option value="virtual">Virtual</option>
-					<option value="cultural">Cultural</option>
-					<option value="other">Other</option>
+					<?php foreach ($cats as $c): ?>
+					<option value="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+					<?php endforeach; ?>
 				</select>
 			</div>
 		</div>

@@ -5,7 +5,13 @@
 			<h1 class="text-3xl font-bold text-white mb-2">Organizer Dashboard</h1>
 			<p class="text-gray-400">Welcome back! Here's an overview of your event performance.</p>
 		</div>
-		<div class="mt-4 md:mt-0">
+		<div class="mt-4 md:mt-0 flex items-center gap-3">
+			<a href="<?php echo base_url('/scanner'); ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+				</svg>
+				Open Scanner
+			</a>
 			<a href="<?php echo base_url('/organizer/events/create'); ?>" class="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -302,6 +308,19 @@
 						<div>
 							<div class="font-semibold text-white">Request Withdrawal</div>
 							<div class="text-sm text-gray-400">Withdraw your earnings</div>
+						</div>
+					</a>
+
+					<!-- Universal Scanner Link (public endpoint, only linked here) -->
+					<a href="<?php echo base_url('/scanner'); ?>" target="_blank" rel="noopener" class="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-600/20 to-indigo-700/20 border border-indigo-500/30 rounded-lg hover:border-indigo-400/50 transition-all duration-200 group">
+						<div class="p-2 bg-indigo-600/20 rounded-lg group-hover:bg-indigo-600/30 transition-colors">
+							<svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+							</svg>
+						</div>
+						<div>
+							<div class="font-semibold text-white">Open Universal Scanner</div>
+							<div class="text-sm text-gray-400">Scan event tickets with device code</div>
 						</div>
 					</a>
 				</div>

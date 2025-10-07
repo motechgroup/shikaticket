@@ -2,7 +2,10 @@
 <div class="max-w-6xl mx-auto px-4 py-10">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-semibold">Travel Destinations</h1>
-        <a class="btn btn-secondary" href="<?php echo base_url('/admin'); ?>">Back</a>
+        <div class="flex gap-2">
+            <a class="btn btn-secondary" href="<?php echo base_url('/admin'); ?>">Back</a>
+            <a class="btn btn-primary" href="<?php echo base_url('/admin/travel/destinations/create'); ?>">Create Destination</a>
+        </div>
     </div>
     <div class="card p-4">
         <?php if (empty($destinations)): ?>

@@ -19,19 +19,23 @@
 </style>
 
 <div class="max-w-md mx-auto px-4 py-12">
-	<h1 class="text-2xl font-semibold mb-6">Scanner Device Login</h1>
-	<form method="post" action="<?php echo base_url('/scanner/login'); ?>" class="space-y-4 card p-6">
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold">Universal Scanner</h1>
+        <p class="text-gray-400 mt-1 text-sm">Sign in with your device code to start scanning</p>
+    </div>
+    <form method="post" action="<?php echo base_url('/scanner/login'); ?>" class="space-y-4 card p-6 shadow-xl border border-gray-800">
 		<?php echo csrf_field(); ?>
-		<div>
-			<label class="block text-sm mb-1">Device Code</label>
-			<input name="device_code" type="text" required class="input uppercase-input" placeholder="T123456" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" value="<?php echo htmlspecialchars($_GET['device_code'] ?? ''); ?>">
-		</div>
-		<button class="btn btn-primary w-full">Login</button>
+        <div>
+            <label class="block text-sm mb-1">Device Code</label>
+            <input name="device_code" type="text" required class="input uppercase-input" placeholder="ABC12345" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="one-time-code" value="<?php echo htmlspecialchars($_GET['device_code'] ?? ''); ?>">
+            <p class="text-xs text-gray-500 mt-1">Tip: Paste your device code and tap Login</p>
+        </div>
+        <button class="btn btn-primary w-full">Login</button>
 	</form>
-	<div class="mt-4 text-sm text-gray-400 text-center">
-		<p>Enter the device code provided by the organizer or travel agency.</p>
-		<p class="mt-2">Device must be active and properly configured.</p>
-	</div>
+    <div class="mt-4 text-sm text-gray-400 text-center">
+        <p>Enter the device code provided by the organizer or travel agency.</p>
+        <p class="mt-2">Device must be active and properly configured.</p>
+    </div>
 </div>
 
 <script>

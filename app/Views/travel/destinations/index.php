@@ -107,6 +107,12 @@ $currentPage = 'destinations';
                                                     Request Feature
                                                 </button>
                                             <?php endif; ?>
+                                            <button onclick="openScannerModal(<?php echo $d['id']; ?>, '<?php echo htmlspecialchars($d['title']); ?>')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-sm font-medium transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                                </svg>
+                                                Scanner
+                                            </button>
                                             <a href="<?php echo base_url('/travel/destinations/edit?id=' . $d['id']); ?>" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600/20 text-gray-300 hover:bg-gray-600/30 rounded-lg text-sm font-medium transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -202,6 +208,220 @@ document.getElementById('featureModal').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeFeatureModal();
+    }
+});
+</script>
+
+<!-- Scanner Assignment Modal -->
+<div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-white">Assign Scanner to Destination</h3>
+            <button onclick="closeScannerModal()" class="text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div id="scannerModalContent">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDestinationId = null;
+let currentDestinationTitle = '';
+
+function openScannerModal(destinationId, destinationTitle) {
+    currentDestinationId = destinationId;
+    currentDestinationTitle = destinationTitle;
+    
+    document.getElementById('scannerModalContent').innerHTML = `
+        <div class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span class="ml-2 text-gray-400">Loading scanners...</span>
+        </div>
+    `;
+    
+    document.getElementById('scannerModal').classList.remove('hidden');
+    
+    // Load available scanners
+    const apiUrl = '<?php echo base_url('/travel/scanner/available'); ?>?destination_id=' + destinationId;
+    console.log('Fetching scanners from:', apiUrl);
+    
+    fetch(apiUrl)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API Response:', data);
+            if (data.success) {
+                renderScannerList(data.scanners, data.assigned_scanners);
+            } else {
+                document.getElementById('scannerModalContent').innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-red-400 mb-2">Error loading scanners</div>
+                        <div class="text-gray-400 text-sm">${data.message || 'Please try again later'}</div>
+                        <div class="text-gray-500 text-xs mt-2">Debug: ${JSON.stringify(data.debug || {})}</div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            document.getElementById('scannerModalContent').innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-red-400 mb-2">Error loading scanners</div>
+                    <div class="text-gray-400 text-sm">Please check your connection and try again</div>
+                    <div class="text-gray-500 text-xs mt-2">Error: ${error.message}</div>
+                </div>
+            `;
+        });
+}
+
+function renderScannerList(scanners, assignedScanners) {
+    const assignedIds = assignedScanners.map(s => s.id);
+    
+    let html = `
+        <div class="mb-4">
+            <h4 class="text-white font-medium mb-2">${currentDestinationTitle}</h4>
+            <p class="text-gray-400 text-sm">Select scanners to assign to this destination</p>
+        </div>
+    `;
+    
+    if (scanners.length === 0) {
+        html += `
+            <div class="text-center py-8">
+                <div class="text-gray-400 mb-4">No scanner devices available</div>
+                <a href="/travel/scanner/create" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Create Scanner Device
+                </a>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="space-y-3">
+                ${scanners.map(scanner => `
+                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg border ${assignedIds.includes(scanner.id) ? 'border-green-500/50' : 'border-gray-700'}">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 bg-blue-600/20 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">${scanner.device_name}</div>
+                                <div class="text-gray-400 text-sm">Code: ${scanner.device_code}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${assignedIds.includes(scanner.id) ? 
+                                `<span class="px-2 py-1 bg-green-900 text-green-200 rounded text-xs">Assigned</span>
+                                 <button onclick="unassignScanner(${scanner.id})" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs">Unassign</button>` :
+                                `<button onclick="assignScanner(${scanner.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs">Assign</button>`
+                            }
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    document.getElementById('scannerModalContent').innerHTML = html;
+}
+
+function assignScanner(scannerId) {
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    fetch('<?php echo base_url('/travel/scanner/assign'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `destination_id=${currentDestinationId}&scanner_id=${scannerId}&action=assign&csrf_token=${csrfToken}`
+    })
+    .then(response => {
+        console.log('Assignment response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Assignment response:', data);
+        if (data.success) {
+            // Reload the scanner list
+            openScannerModal(currentDestinationId, currentDestinationTitle);
+        } else {
+            alert('Error: ' + (data.message || 'Failed to assign scanner'));
+        }
+    })
+    .catch(error => {
+        console.error('Assignment error:', error);
+        alert('Error: ' + error.message);
+    });
+}
+
+function unassignScanner(scannerId) {
+    if (!confirm('Are you sure you want to unassign this scanner from the destination?')) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    fetch('<?php echo base_url('/travel/scanner/assign'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `destination_id=${currentDestinationId}&scanner_id=${scannerId}&action=unassign&csrf_token=${csrfToken}`
+    })
+    .then(response => {
+        console.log('Unassignment response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Unassignment response:', data);
+        if (data.success) {
+            // Reload the scanner list
+            openScannerModal(currentDestinationId, currentDestinationTitle);
+        } else {
+            alert('Error: ' + (data.message || 'Failed to unassign scanner'));
+        }
+    })
+    .catch(error => {
+        console.error('Unassignment error:', error);
+        alert('Error: ' + error.message);
+    });
+}
+
+function closeScannerModal() {
+    document.getElementById('scannerModal').classList.add('hidden');
+    currentDestinationId = null;
+    currentDestinationTitle = '';
+}
+
+// Close modal when clicking outside
+document.getElementById('scannerModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeScannerModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeScannerModal();
     }
 });
 </script>

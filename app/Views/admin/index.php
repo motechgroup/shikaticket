@@ -21,7 +21,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 					</svg>
 				</div>
-				<div class="text-xs md:text-sm text-gray-400 font-medium">Paid Orders</div>
+				<div class="text-xs md:text-sm text-gray-400 font-medium">System Paid Orders</div>
 			</div>
 			<div class="text-xl md:text-3xl font-bold text-green-400"><?php echo (int)($orders['total_orders'] ?? 0); ?></div>
 		</div>
@@ -32,7 +32,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
 					</svg>
 				</div>
-				<div class="text-xs md:text-sm text-gray-400 font-medium">Gross Revenue</div>
+				<div class="text-xs md:text-sm text-gray-400 font-medium">System Events Revenue</div>
 			</div>
 			<div class="text-xl md:text-3xl font-bold text-blue-400">KES <?php echo number_format((float)($orders['gross'] ?? 0), 2); ?></div>
 		</div>
@@ -43,12 +43,11 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
 					</svg>
 				</div>
-				<div class="text-xs md:text-sm text-gray-400 font-medium">Currencies</div>
+				<div class="text-xs md:text-sm text-gray-400 font-medium">System Travel Revenue</div>
 			</div>
 			<div class="text-sm md:text-base space-y-1 text-purple-400">
-				<?php foreach ($byCurrency as $row): ?>
-				<div class="font-semibold"><?php echo htmlspecialchars($row['currency']); ?>: <?php echo number_format((float)$row['gross'], 2); ?></div>
-				<?php endforeach; ?>
+				<div class="font-semibold">Bookings: <?php echo (int)($systemTravel['bookings'] ?? 0); ?></div>
+				<div class="font-semibold">KES <?php echo number_format((float)($systemTravel['revenue'] ?? 0), 2); ?></div>
 			</div>
 		</div>
 		<div class="card p-4 md:p-6 text-center md:text-left group hover:border-orange-500/50 transition-all duration-300">
@@ -180,6 +179,16 @@
 					<span class="text-sm md:text-base font-medium">Manage Events</span>
 				</div>
 			</a>
+			<a href="<?php echo base_url('/admin/events/create'); ?>" class="card p-4 md:p-6 hover:border-purple-500/70 touch-target flex items-center justify-center md:justify-start transition-all duration-200 group">
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-purple-500/20 rounded-lg group-hover:bg-purple-500/30 transition-colors">
+						<svg class="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						</svg>
+					</div>
+					<span class="text-sm md:text-base font-medium">Create Event</span>
+				</div>
+			</a>
 			<a href="<?php echo base_url('/admin/communications'); ?>" class="card p-4 md:p-6 hover:border-green-500 touch-target flex items-center justify-center md:justify-start transition-all duration-200 group">
 				<div class="flex items-center gap-3">
 					<div class="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
@@ -199,6 +208,36 @@
 						</svg>
 					</div>
 					<span class="text-sm md:text-base font-medium">Settings</span>
+				</div>
+			</a>
+			<a href="<?php echo base_url('/admin/scanners'); ?>" class="card p-4 md:p-6 hover:border-teal-500 touch-target flex items-center justify-center md:justify-start transition-all duration-200 group">
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-teal-500/20 rounded-lg group-hover:bg-teal-500/30 transition-colors">
+						<svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A2 2 0 0122 9.528V14.5a2 2 0 01-1.106 1.789L15 18m0-8l-6 3m6-3V18m-6-3l-4.553 2.276A2 2 0 012 14.472V9.5A2 2 0 013.106 7.711L9 5m0 10V5"></path>
+						</svg>
+					</div>
+					<span class="text-sm md:text-base font-medium">Admin Scanners</span>
+				</div>
+			</a>
+			<a href="<?php echo base_url('/scanner'); ?>" class="card p-4 md:p-6 hover:border-lime-500 touch-target flex items-center justify-center md:justify-start transition-all duration-200 group">
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-lime-500/20 rounded-lg group-hover:bg-lime-500/30 transition-colors">
+						<svg class="w-5 h-5 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"></path>
+						</svg>
+					</div>
+					<span class="text-sm md:text-base font-medium">System Scanner</span>
+				</div>
+			</a>
+			<a href="<?php echo base_url('/admin/travel/destinations/create'); ?>" class="card p-4 md:p-6 hover:border-cyan-500 touch-target flex items-center justify-center md:justify-start transition-all duration-200 group">
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-cyan-500/20 rounded-lg group-hover:bg-cyan-500/30 transition-colors">
+						<svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						</svg>
+					</div>
+					<span class="text-sm md:text-base font-medium">Create Destination</span>
 				</div>
 			</a>
 		</div>

@@ -641,27 +641,6 @@ class TravelController
         travel_view('travel/scanner/create');
     }
     
-    public function deleteScanner(): void
-    {
-        require_travel_agency();
-        verify_csrf();
-        $deviceId = $_POST['device_id'] ?? null;
-        $agencyId = $_SESSION['travel_agency_id'];
-
-        if (!$deviceId) {
-            flash_set('error', 'Invalid device ID.');
-            redirect(base_url('/travel/scanner'));
-        }
-
-        try {
-            $stmt = db()->prepare('DELETE FROM travel_scanner_devices WHERE id = ? AND travel_agency_id = ?');
-            $stmt->execute([$deviceId, $agencyId]);
-            flash_set('success', 'Scanner device deleted successfully.');
-        } catch (Exception $e) {
-            flash_set('error', 'Failed to delete scanner device: ' . $e->getMessage());
-        }
-        redirect(base_url('/travel/scanner'));
-    }
     
     public function toggleScanner(): void
     {
@@ -707,7 +686,212 @@ class TravelController
             redirect(base_url('/travel/scanner'));
         }
         
-        travel_view('travel/scanner/scan', compact('device'));
+        // Store device info in session and redirect to universal scanner
+        $_SESSION['travel_scanner_device_id'] = $device['id'];
+        $_SESSION['travel_scanner_device_code'] = $device['device_code'];
+        $_SESSION['travel_scanner_agency_id'] = $agencyId;
+        
+        // Redirect to universal scanner with device code
+        redirect(base_url('/scanner/login?device_code=' . urlencode($device['device_code'])));
+    }
+    
+    public function getAvailableScanners(): void
+    {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in as travel agency
+        if (!isset($_SESSION['travel_agency_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Not logged in as travel agency']);
+            return;
+        }
+        
+        $destinationId = $_GET['destination_id'] ?? null;
+        $agencyId = $_SESSION['travel_agency_id'];
+        
+        if (!$destinationId) {
+            echo json_encode(['success' => false, 'message' => 'Destination ID is required']);
+            return;
+        }
+        
+        try {
+            // Get all active scanner devices for this agency
+            $stmt = db()->prepare('SELECT id, device_name, device_code FROM travel_scanner_devices WHERE travel_agency_id = ? AND is_active = 1');
+            $stmt->execute([$agencyId]);
+            $scanners = $stmt->fetchAll();
+            
+            // Get currently assigned scanners for this destination
+            $stmt = db()->prepare('
+                SELECT tsd.id, tsd.device_name, tsd.device_code 
+                FROM travel_scanner_devices tsd
+                JOIN travel_scanner_assignments tsa ON tsd.id = tsa.scanner_device_id
+                WHERE tsa.destination_id = ? AND tsd.travel_agency_id = ?
+            ');
+            $stmt->execute([$destinationId, $agencyId]);
+            $assignedScanners = $stmt->fetchAll();
+            
+            echo json_encode([
+                'success' => true,
+                'scanners' => $scanners,
+                'assigned_scanners' => $assignedScanners,
+                'debug' => [
+                    'agency_id' => $agencyId,
+                    'destination_id' => $destinationId,
+                    'scanner_count' => count($scanners),
+                    'assigned_count' => count($assignedScanners)
+                ]
+            ]);
+            
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Failed to load scanners: ' . $e->getMessage(),
+                'debug' => [
+                    'agency_id' => $agencyId,
+                    'destination_id' => $destinationId,
+                    'error' => $e->getMessage()
+                ]
+            ]);
+        }
+    }
+    
+    public function assignScanner(): void
+    {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in as travel agency
+        if (!isset($_SESSION['travel_agency_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Not logged in as travel agency']);
+            return;
+        }
+        
+        verify_csrf();
+        
+        $destinationId = $_POST['destination_id'] ?? null;
+        $scannerId = $_POST['scanner_id'] ?? null;
+        $action = $_POST['action'] ?? null;
+        $agencyId = $_SESSION['travel_agency_id'];
+        
+        if (!$destinationId || !$scannerId || !in_array($action, ['assign', 'unassign'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid request parameters']);
+            return;
+        }
+        
+        try {
+            // Verify the scanner belongs to this agency
+            $stmt = db()->prepare('SELECT id FROM travel_scanner_devices WHERE id = ? AND travel_agency_id = ? AND is_active = 1');
+            $stmt->execute([$scannerId, $agencyId]);
+            if (!$stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid scanner device']);
+                return;
+            }
+            
+            // Verify the destination belongs to this agency
+            $stmt = db()->prepare('SELECT id FROM travel_destinations WHERE id = ? AND agency_id = ?');
+            $stmt->execute([$destinationId, $agencyId]);
+            if (!$stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid destination']);
+                return;
+            }
+            
+            if ($action === 'assign') {
+                // Check if already assigned
+                $stmt = db()->prepare('SELECT id FROM travel_scanner_assignments WHERE scanner_device_id = ? AND destination_id = ?');
+                $stmt->execute([$scannerId, $destinationId]);
+                if ($stmt->fetch()) {
+                    echo json_encode(['success' => false, 'message' => 'Scanner is already assigned to this destination']);
+                    return;
+                }
+                
+                // Assign scanner
+                $stmt = db()->prepare('INSERT INTO travel_scanner_assignments (scanner_device_id, destination_id, assigned_at) VALUES (?, ?, NOW())');
+                $stmt->execute([$scannerId, $destinationId]);
+                
+                echo json_encode(['success' => true, 'message' => 'Scanner assigned successfully']);
+                
+            } else { // unassign
+                // Remove assignment
+                $stmt = db()->prepare('DELETE FROM travel_scanner_assignments WHERE scanner_device_id = ? AND destination_id = ?');
+                $stmt->execute([$scannerId, $destinationId]);
+                
+                echo json_encode(['success' => true, 'message' => 'Scanner unassigned successfully']);
+            }
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to update assignment: ' . $e->getMessage()]);
+        }
+    }
+
+    public function deleteScanner(): void
+    {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in as travel agency
+        if (!isset($_SESSION['travel_agency_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Not logged in as travel agency']);
+            return;
+        }
+        
+        verify_csrf();
+        
+        $scannerId = $_POST['scanner_id'] ?? null;
+        $agencyId = $_SESSION['travel_agency_id'];
+        
+        if (!$scannerId) {
+            echo json_encode(['success' => false, 'message' => 'Scanner ID is required']);
+            return;
+        }
+        
+        try {
+            // Verify the scanner belongs to this agency
+            $stmt = db()->prepare('SELECT id, device_name FROM travel_scanner_devices WHERE id = ? AND travel_agency_id = ?');
+            $stmt->execute([$scannerId, $agencyId]);
+            $scanner = $stmt->fetch();
+            
+            if (!$scanner) {
+                echo json_encode(['success' => false, 'message' => 'Scanner device not found or access denied']);
+                return;
+            }
+            
+            // Check if scanner has any scans recorded
+            $stmt = db()->prepare('SELECT COUNT(*) as scan_count FROM travel_booking_scans WHERE scanner_device_id = ?');
+            $stmt->execute([$scannerId]);
+            $scanData = $stmt->fetch();
+            $hasScans = $scanData['scan_count'] > 0;
+            
+            if ($hasScans) {
+                // Soft delete - deactivate instead of hard delete to preserve scan history
+                $stmt = db()->prepare('UPDATE travel_scanner_devices SET is_active = 0, updated_at = NOW() WHERE id = ? AND travel_agency_id = ?');
+                $stmt->execute([$scannerId, $agencyId]);
+                
+                // Remove all assignments
+                $stmt = db()->prepare('DELETE FROM travel_scanner_assignments WHERE scanner_device_id = ?');
+                $stmt->execute([$scannerId]);
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Scanner deactivated successfully (scan history preserved)',
+                    'action' => 'deactivated'
+                ]);
+            } else {
+                // Hard delete - no scan history to preserve
+                // Remove assignments first
+                $stmt = db()->prepare('DELETE FROM travel_scanner_assignments WHERE scanner_device_id = ?');
+                $stmt->execute([$scannerId]);
+                
+                // Delete the scanner device
+                $stmt = db()->prepare('DELETE FROM travel_scanner_devices WHERE id = ? AND travel_agency_id = ?');
+                $stmt->execute([$scannerId, $agencyId]);
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Scanner deleted successfully',
+                    'action' => 'deleted'
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to delete scanner: ' . $e->getMessage()]);
+        }
     }
     
     public function scannerVerify(): void

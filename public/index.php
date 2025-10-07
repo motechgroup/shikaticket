@@ -162,6 +162,23 @@ $router->get('/admin/users/export', 'AdminController@exportUsers');
 $router->post('/admin/users/toggle', 'AdminController@toggleUser');
 $router->post('/admin/users/delete', 'AdminController@deleteUser');
 $router->get('/admin/events', 'AdminController@events');
+$router->get('/admin/events/create', 'AdminController@eventCreate');
+$router->post('/admin/events/save', 'AdminController@eventStore');
+$router->get('/admin/scanners', 'AdminController@adminScannerDevices');
+$router->post('/admin/scanners/create', 'AdminController@adminCreateScannerDevice');
+$router->post('/admin/scanners/update', 'AdminController@adminUpdateScannerDevice');
+$router->post('/admin/scanners/delete', 'AdminController@adminDeleteScannerDevice');
+$router->get('/admin/scanners/assignments', 'AdminController@adminScannerAssignments');
+$router->post('/admin/scanners/assign', 'AdminController@adminAssignScannerToEvent');
+$router->post('/admin/scanners/unassign', 'AdminController@adminUnassignScannerFromEvent');
+// Admin Travel Scanners (system agency)
+$router->get('/admin/travel/scanners', 'AdminController@adminTravelScanners');
+$router->post('/admin/travel/scanners/create', 'AdminController@adminCreateTravelScanner');
+$router->post('/admin/travel/scanners/update', 'AdminController@adminUpdateTravelScanner');
+$router->post('/admin/travel/scanners/delete', 'AdminController@adminDeleteTravelScanner');
+$router->get('/admin/travel/scanners/assignments', 'AdminController@adminTravelScannerAssignments');
+$router->post('/admin/travel/scanners/assign', 'AdminController@adminAssignTravelScannerToDestination');
+$router->post('/admin/travel/scanners/unassign', 'AdminController@adminUnassignTravelScannerFromDestination');
 $router->get('/admin/categories', 'AdminCategoryController@index');
 $router->get('/admin/categories/create', 'AdminCategoryController@form');
 $router->get('/admin/categories/edit', 'AdminCategoryController@form');
@@ -206,12 +223,14 @@ $router->post('/admin/travel/agencies/verify-payment', 'AdminController@verifyTr
 $router->post('/admin/travel/agencies/toggle', 'AdminController@toggleTravelAgency');
 $router->post('/admin/travel/agencies/delete', 'AdminController@deleteTravelAgency');
 $router->get('/admin/travel/destinations', 'AdminController@travelDestinations');
+$router->get('/admin/travel/destinations/create', 'AdminController@travelDestinationCreate');
+$router->post('/admin/travel/destinations/save', 'AdminController@travelDestinationStore');
 $router->get('/admin/settings', 'AdminController@settings');
 $router->post('/admin/settings', 'AdminController@saveSettings');
 $router->post('/admin/settings/test-email', 'AdminController@sendTestEmail');
 $router->post('/admin/settings/restore-mpesa', 'AdminController@restoreMpesaFromEnv');
 $router->get('/admin/profile', 'AdminController@profile');
-$router->post('/admin/profile', 'AdminController@profileSave');
+$router->post('/admin/profile', 'AdminController@profileUpdate');
 $router->get('/admin/accounts/create', 'AdminController@createAccounts');
 $router->post('/admin/accounts/create-user', 'AdminController@createUser');
 $router->post('/admin/accounts/create-organizer', 'AdminController@createOrganizer');
@@ -318,6 +337,8 @@ $router->get('/scanner/login', 'ScannerController@loginForm');
 $router->post('/scanner/login', 'ScannerController@login');
 $router->get('/scanner', 'ScannerController@index');
 $router->post('/scanner/verify', 'ScannerController@verify');
+$router->get('/scanner/debug-session', 'ScannerController@debugSession');
+$router->get('/scanner/test-scan', 'ScannerController@testScan');
 $router->get('/scanner/verify', 'ScannerController@verify');
 
 // Travel Agency routes (subdomain can point to same app; routes prefixed by /travel)
@@ -341,6 +362,9 @@ $router->get('/travel/scanner/scan', 'TravelController@scannerScan');
 $router->post('/travel/scanner/verify', 'TravelController@scannerVerify');
 $router->get('/travel/scanner/edit', 'TravelController@editScanner');
 $router->post('/travel/scanner/edit', 'TravelController@updateScanner');
+$router->get('/travel/scanner/available', 'TravelController@getAvailableScanners');
+$router->post('/travel/scanner/assign', 'TravelController@assignScanner');
+$router->post('/travel/scanner/delete', 'TravelController@deleteScanner');
 
 $router->get('/travel/dashboard', 'TravelController@dashboard');
 $router->get('/travel/destinations', 'TravelController@destinations');

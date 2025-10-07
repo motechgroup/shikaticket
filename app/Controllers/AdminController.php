@@ -8,9 +8,39 @@ class AdminController
 	public function index(): void
 	{
 		require_admin();
-        // Finance summary
-        $orders = db()->query("SELECT COUNT(*) AS total_orders, SUM(total_amount) AS gross FROM orders WHERE status='paid'")->fetch();
-        $byCurrency = db()->query("SELECT currency, SUM(total_amount) AS gross FROM orders WHERE status='paid' GROUP BY currency")->fetchAll();
+        // Finance summary (system-owned only)
+        $systemOrganizerId = $this->getOrCreateAdminOrganizerId();
+        $systemAgencyId = $this->getOrCreateAdminAgencyId();
+
+        // System events revenue via orders/order_items
+        $orders = db()->query(
+            "SELECT COUNT(DISTINCT ord.id) AS total_orders, SUM(oi.quantity*oi.unit_price) AS gross
+             FROM orders ord
+             JOIN order_items oi ON oi.order_id = ord.id
+             JOIN events e ON e.id = oi.event_id
+             WHERE ord.status='paid' AND e.organizer_id = " . (int)$systemOrganizerId
+        )->fetch();
+        $byCurrency = db()->query(
+            "SELECT ord.currency, SUM(oi.quantity*oi.unit_price) AS gross
+             FROM orders ord
+             JOIN order_items oi ON oi.order_id = ord.id
+             JOIN events e ON e.id = oi.event_id
+             WHERE ord.status='paid' AND e.organizer_id = " . (int)$systemOrganizerId .
+             " GROUP BY ord.currency"
+        )->fetchAll();
+
+        // System travel revenue (paid bookings for admin agency)
+        $systemTravel = [ 'bookings' => 0, 'revenue' => 0.0 ];
+        try {
+            $row = db()->query(
+                "SELECT COUNT(*) as bookings, COALESCE(SUM(tb.total_amount),0) as revenue
+                 FROM travel_bookings tb
+                 JOIN travel_destinations td ON td.id = tb.destination_id
+                 JOIN travel_payments tp ON tp.booking_id = tb.id
+                 WHERE tp.payment_status='paid' AND td.agency_id = " . (int)$systemAgencyId
+            )->fetch();
+            if ($row) { $systemTravel = [ 'bookings' => (int)$row['bookings'], 'revenue' => (float)$row['revenue'] ]; }
+        } catch (\Throwable $e) {}
         $pendingWithdrawals = db()->query("
             SELECT w.*, 
                    o.full_name as organizer_name,
@@ -61,7 +91,7 @@ class AdminController
             ")->fetchAll();
         } catch (\Throwable $e) {}
         
-        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue', 'featureRequests'));
+        view('admin/index', compact('orders', 'byCurrency', 'pendingWithdrawals', 'commissionRevenue', 'featureRequests', 'systemTravel'));
 	}
 
 	public function loginForm(): void
@@ -474,6 +504,64 @@ class AdminController
 		view('admin/events', compact('events'));
 	}
 
+	public function eventCreate(): void
+	{
+		require_admin();
+		$cats = db()->query('SELECT id, name FROM event_categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC')->fetchAll();
+		view('admin/event_create', ['categories' => $cats]);
+	}
+
+	public function eventStore(): void
+	{
+		require_admin();
+		$title = trim($_POST['title'] ?? '');
+        $venue = trim($_POST['venue'] ?? '');
+        $category = trim($_POST['category'] ?? '');
+        $eventDate = $_POST['event_date'] ?? null;
+        $eventTime = $_POST['event_time'] ?? null;
+        $desc = trim($_POST['description'] ?? '');
+        $capacity = (int)($_POST['capacity'] ?? 0);
+        $regularPrice = isset($_POST['regular_price']) ? (float)$_POST['regular_price'] : null;
+        $earlyBirdPrice = isset($_POST['early_bird_price']) ? (float)$_POST['early_bird_price'] : null;
+        $earlyBirdUntil = $_POST['early_bird_until'] ?? null;
+        $vipPrice = isset($_POST['vip_price']) ? (float)$_POST['vip_price'] : null;
+        $vvipPrice = isset($_POST['vvip_price']) ? (float)$_POST['vvip_price'] : null;
+        $groupPrice = isset($_POST['group_price']) ? (float)$_POST['group_price'] : null;
+        $groupSize = isset($_POST['group_size']) ? (int)$_POST['group_size'] : null;
+        $currency = trim($_POST['currency'] ?? 'KES');
+        $dressCode = trim($_POST['dress_code'] ?? '');
+        $lineup = trim($_POST['lineup'] ?? '');
+        // Admin-owned event must be attached to a real organizer due to FK
+        $organizerId = $this->getOrCreateAdminOrganizerId();
+		$posterPath = null;
+		if (!empty($_FILES['poster']['tmp_name'])) {
+			$ext = pathinfo($_FILES['poster']['name'], PATHINFO_EXTENSION);
+			$destDir = __DIR__ . '/../../public/uploads';
+			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+			$filename = 'poster_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
+			$dest = $destDir . '/' . $filename;
+			move_uploaded_file($_FILES['poster']['tmp_name'], $dest);
+			$posterPath = 'uploads/' . $filename;
+		}
+        $stmt = db()->prepare('INSERT INTO events (organizer_id, title, description, category, event_date, event_time, venue, poster_path, capacity, regular_price, early_bird_price, early_bird_until, vip_price, vvip_price, group_price, group_size, currency, dress_code, lineup, is_featured, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)');
+        $stmt->execute([$organizerId, $title, $desc, $category, $eventDate, $eventTime, $venue, $posterPath, $capacity, $regularPrice, $earlyBirdPrice, $earlyBirdUntil, $vipPrice, $vvipPrice, $groupPrice, $groupSize, $currency, $dressCode, $lineup]);
+		flash_set('success', 'Event created.');
+		redirect(base_url('/admin/events'));
+	}
+
+	private function getOrCreateAdminOrganizerId(): int
+	{
+		try {
+			$row = db()->query("SELECT id FROM organizers WHERE email = 'admin@system.local' LIMIT 1")->fetch();
+			if ($row && (int)$row["id"] > 0) { return (int)$row["id"]; }
+			$stmt = db()->prepare('INSERT INTO organizers (full_name, phone, email, password_hash, is_approved) VALUES (?, ?, ?, ?, 1)');
+			$stmt->execute(['System Organizer', '0000000000', 'admin@system.local', password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT)]);
+			return (int)db()->lastInsertId();
+		} catch (\PDOException $e) {
+			return 1; // Fallback if a seeded organizer exists
+		}
+	}
+
 	public function banners(): void
 	{
 		require_admin();
@@ -649,6 +737,174 @@ class AdminController
 			db()->prepare('DELETE FROM events WHERE id = ?')->execute([$id]);
 		}
 		redirect(base_url('/admin/events'));
+	}
+
+	// --- Admin Scanner Device Management (for system-owned events) ---
+	public function adminScannerDevices(): void
+	{
+		require_admin();
+		$organizerId = $this->getOrCreateAdminOrganizerId();
+		$agencyId = $this->getOrCreateAdminAgencyId();
+		$devices = \App\Models\ScannerDevice::findByOrganizer($organizerId);
+		$eventsStmt = db()->prepare('SELECT id, title, event_date FROM events WHERE organizer_id = ? ORDER BY event_date DESC');
+		$eventsStmt->execute([$organizerId]);
+		$events = $eventsStmt->fetchAll();
+		$destStmt = db()->prepare('SELECT id, title, departure_date FROM travel_destinations WHERE agency_id = ? ORDER BY departure_date DESC');
+		$destStmt->execute([$agencyId]);
+		$destinations = $destStmt->fetchAll();
+		view('admin/scanner_devices', compact('devices','events','destinations'));
+	}
+
+	public function adminCreateScannerDevice(): void
+	{
+		require_admin(); verify_csrf();
+		$name = trim($_POST['device_name'] ?? '');
+		if ($name === '') { flash_set('error','Device name required'); redirect(base_url('/admin/scanners')); }
+		$organizerId = $this->getOrCreateAdminOrganizerId();
+		\App\Models\ScannerDevice::create($organizerId, $name);
+		flash_set('success','Scanner created');
+		redirect(base_url('/admin/scanners'));
+	}
+
+	public function adminUpdateScannerDevice(): void
+	{
+		require_admin(); verify_csrf();
+		$id = (int)($_POST['device_id'] ?? 0);
+		$name = trim($_POST['device_name'] ?? '');
+		$isActive = isset($_POST['is_active']);
+		if ($id <= 0 || $name === '') { flash_set('error','Invalid device'); redirect(base_url('/admin/scanners')); }
+		\App\Models\ScannerDevice::update($id, $name, $isActive);
+		flash_set('success','Scanner updated');
+		redirect(base_url('/admin/scanners'));
+	}
+
+	public function adminDeleteScannerDevice(): void
+	{
+		require_admin(); verify_csrf();
+		$id = (int)($_POST['device_id'] ?? 0);
+		if ($id > 0) { \App\Models\ScannerDevice::delete($id); }
+		flash_set('success','Scanner deleted');
+		redirect(base_url('/admin/scanners'));
+	}
+
+	public function adminScannerAssignments(): void
+	{
+		require_admin();
+		$organizerId = $this->getOrCreateAdminOrganizerId();
+		$events = db()->prepare('SELECT * FROM events WHERE organizer_id = ? AND is_published = 1 ORDER BY event_date DESC');
+		$events->execute([$organizerId]);
+		$events = $events->fetchAll();
+		$devices = \App\Models\ScannerDevice::findByOrganizer($organizerId);
+		view('admin/scanner_assignments', compact('events','devices'));
+	}
+
+	public function adminAssignScannerToEvent(): void
+	{
+		require_admin(); verify_csrf();
+		$scannerId = (int)($_POST['scanner_id'] ?? 0);
+		$eventId = (int)($_POST['event_id'] ?? 0);
+		if ($scannerId <= 0 || $eventId <= 0) { redirect(base_url('/admin/scanners/assignments')); }
+        // Include organizer_id to satisfy FK constraints
+        $organizerId = $this->getOrCreateAdminOrganizerId();
+        // Upsert to avoid duplicate key on unique_event_scanner (scanner_device_id, event_id)
+        $sql = 'INSERT INTO event_scanner_assignments (scanner_device_id, event_id, organizer_id, is_active, assigned_at) VALUES (?, ?, ?, 1, NOW()) 
+                ON DUPLICATE KEY UPDATE is_active = VALUES(is_active), assigned_at = VALUES(assigned_at), organizer_id = VALUES(organizer_id)';
+        $stmt = db()->prepare($sql);
+        $stmt->execute([$scannerId, $eventId, $organizerId]);
+        flash_set('success','Scanner linked to event');
+		redirect(base_url('/admin/scanners/assignments'));
+	}
+
+	public function adminUnassignScannerFromEvent(): void
+	{
+		require_admin(); verify_csrf();
+		$scannerId = (int)($_POST['scanner_id'] ?? 0);
+		$eventId = (int)($_POST['event_id'] ?? 0);
+		if ($scannerId <= 0 || $eventId <= 0) { redirect(base_url('/admin/scanners/assignments')); }
+		$stmt = db()->prepare('UPDATE event_scanner_assignments SET is_active = 0 WHERE scanner_device_id = ? AND event_id = ?');
+		$stmt->execute([$scannerId, $eventId]);
+		flash_set('success','Scanner unassigned');
+		redirect(base_url('/admin/scanners/assignments'));
+	}
+
+	// --- Admin Travel Scanners for system destinations ---
+	public function adminTravelScanners(): void
+	{
+		require_admin();
+		$agencyId = $this->getOrCreateAdminAgencyId();
+		$rows = db()->prepare('SELECT * FROM travel_scanner_devices WHERE travel_agency_id = ? ORDER BY created_at DESC');
+		$rows->execute([$agencyId]);
+		$devices = $rows->fetchAll();
+		view('admin/travel_scanner_devices', compact('devices'));
+	}
+
+	public function adminCreateTravelScanner(): void
+	{
+		require_admin(); verify_csrf();
+		$name = trim($_POST['device_name'] ?? '');
+		if ($name === '') { flash_set('error','Device name required'); redirect(base_url('/admin/travel/scanners')); }
+		$agencyId = $this->getOrCreateAdminAgencyId();
+		$code = strtoupper(substr(md5(uniqid()),0,8));
+		db()->prepare('INSERT INTO travel_scanner_devices (travel_agency_id, device_name, device_code, is_active) VALUES (?, ?, ?, 1)')->execute([$agencyId, $name, $code]);
+		flash_set('success','Travel scanner created');
+		redirect(base_url('/admin/travel/scanners'));
+	}
+
+	public function adminUpdateTravelScanner(): void
+	{
+		require_admin(); verify_csrf();
+		$id = (int)($_POST['device_id'] ?? 0);
+		$name = trim($_POST['device_name'] ?? '');
+		$isActive = isset($_POST['is_active']) ? 1 : 0;
+		if ($id <= 0 || $name === '') { redirect(base_url('/admin/travel/scanners')); }
+		db()->prepare('UPDATE travel_scanner_devices SET device_name = ?, is_active = ? WHERE id = ?')->execute([$name, $isActive, $id]);
+		flash_set('success','Travel scanner updated');
+		redirect(base_url('/admin/travel/scanners'));
+	}
+
+	public function adminDeleteTravelScanner(): void
+	{
+		require_admin(); verify_csrf();
+		$id = (int)($_POST['device_id'] ?? 0);
+		if ($id > 0) { db()->prepare('DELETE FROM travel_scanner_devices WHERE id = ?')->execute([$id]); }
+		flash_set('success','Travel scanner deleted');
+		redirect(base_url('/admin/travel/scanners'));
+	}
+
+	public function adminTravelScannerAssignments(): void
+	{
+		require_admin();
+		$agencyId = $this->getOrCreateAdminAgencyId();
+		$destinations = db()->prepare('SELECT id, title, departure_date FROM travel_destinations WHERE agency_id = ? AND is_published = 1 ORDER BY departure_date DESC');
+		$destinations->execute([$agencyId]);
+		$destinations = $destinations->fetchAll();
+		$devices = db()->prepare('SELECT * FROM travel_scanner_devices WHERE travel_agency_id = ? AND is_active = 1 ORDER BY created_at DESC');
+		$devices->execute([$agencyId]);
+		$devices = $devices->fetchAll();
+		view('admin/travel_scanner_assignments', compact('destinations','devices'));
+	}
+
+	public function adminAssignTravelScannerToDestination(): void
+	{
+		require_admin(); verify_csrf();
+		$scannerId = (int)($_POST['scanner_id'] ?? 0);
+		$destinationId = (int)($_POST['destination_id'] ?? 0);
+		if ($scannerId <= 0 || $destinationId <= 0) { redirect(base_url('/admin/travel/scanners/assignments')); }
+        db()->prepare('INSERT INTO travel_scanner_assignments (scanner_device_id, destination_id, is_active, assigned_at) VALUES (?, ?, 1, NOW()) 
+                       ON DUPLICATE KEY UPDATE is_active=VALUES(is_active), assigned_at=VALUES(assigned_at)')->execute([$scannerId, $destinationId]);
+        flash_set('success','Scanner linked to destination');
+		redirect(base_url('/admin/travel/scanners/assignments'));
+	}
+
+	public function adminUnassignTravelScannerFromDestination(): void
+	{
+		require_admin(); verify_csrf();
+		$scannerId = (int)($_POST['scanner_id'] ?? 0);
+		$destinationId = (int)($_POST['destination_id'] ?? 0);
+		if ($scannerId <= 0 || $destinationId <= 0) { redirect(base_url('/admin/travel/scanners/assignments')); }
+		db()->prepare('UPDATE travel_scanner_assignments SET is_active = 0 WHERE scanner_device_id = ? AND destination_id = ?')->execute([$scannerId, $destinationId]);
+		flash_set('success','Scanner unassigned');
+		redirect(base_url('/admin/travel/scanners/assignments'));
 	}
 
 	public function scans(): void
@@ -1211,10 +1467,107 @@ class AdminController
     {
         require_admin();
         try {
-            $rows = db()->query('SELECT td.*, ta.company_name FROM travel_destinations td JOIN travel_agencies ta ON ta.id = td.agency_id ORDER BY td.created_at DESC')->fetchAll();
+            $rows = db()->query('SELECT td.*, ta.company_name FROM travel_destinations td LEFT JOIN travel_agencies ta ON ta.id = td.agency_id ORDER BY td.created_at DESC')->fetchAll();
         } catch (\PDOException $e) { $rows = []; }
         view('admin/travel_destinations', ['destinations' => $rows]);
     }
+
+	public function travelDestinationCreate(): void
+	{
+		require_admin();
+        // Admin-owned destination: default agency is system-owned
+        $defaultAgencyId = $this->getOrCreateAdminAgencyId();
+        view('admin/travel_destination_create');
+	}
+
+	private function getOrCreateAdminAgencyId(): int
+	{
+		try {
+			$row = db()->query("SELECT id FROM travel_agencies WHERE email = 'admin@system.local' LIMIT 1")->fetch();
+			if ($row && (int)$row['id'] > 0) { return (int)$row['id']; }
+			$stmt = db()->prepare('INSERT INTO travel_agencies (company_name, contact_person, email, phone, password_hash, is_approved, is_active, phone_verified) VALUES (?, ?, ?, ?, ?, 1, 1, 1)');
+			$stmt->execute(['System Travel', 'Admin', 'admin@system.local', '0000000000', password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT)]);
+			return (int)db()->lastInsertId();
+		} catch (\PDOException $e) {
+			return 1; // Fallback if a seeded agency exists
+		}
+	}
+
+	public function travelDestinationStore(): void
+	{
+		require_admin();
+        // Admin-owned destination must be attached to a real agency due to FK
+        $agencyId = $this->getOrCreateAdminAgencyId();
+        $title = trim($_POST['title'] ?? '');
+        $destination = trim($_POST['destination'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $durationDays = (int)($_POST['duration_days'] ?? 1);
+        $price = (float)($_POST['price'] ?? 0);
+        $currency = trim($_POST['currency'] ?? 'KES');
+        $maxParticipants = (int)($_POST['max_participants'] ?? 50);
+        $minParticipants = (int)($_POST['min_participants'] ?? 1);
+        $departureLocation = trim($_POST['departure_location'] ?? '');
+        $departureDate = $_POST['departure_date'] ?? '';
+        $returnDate = $_POST['return_date'] ?? '';
+        $bookingDeadline = $_POST['booking_deadline'] ?? '';
+        $isFeatured = isset($_POST['is_featured']) ? 1 : 0;
+        $isPublished = isset($_POST['is_published']) ? 1 : 0;
+        $childrenAllowed = isset($_POST['children_allowed']) ? 1 : 0;
+
+        // List fields (stored as JSON arrays)
+        $includes = json_encode(array_filter(array_map('trim', explode("\n", $_POST['includes'] ?? ''))));
+        $excludes = json_encode(array_filter(array_map('trim', explode("\n", $_POST['excludes'] ?? ''))));
+        $requirements = json_encode(array_filter(array_map('trim', explode("\n", $_POST['requirements'] ?? ''))));
+        $itinerary = json_encode(array_filter(array_map('trim', explode("\n", $_POST['itinerary'] ?? ''))));
+
+        // Handle main image
+        $imagePath = null;
+        if (!empty($_FILES['image']['tmp_name'])) {
+            $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $destDir = __DIR__ . '/../../public/uploads/travel';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+            $filename = 'destination_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
+            $dest = $destDir . '/' . $filename;
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $dest)) {
+                $imagePath = 'uploads/travel/' . $filename;
+            }
+        }
+
+        // Handle gallery images
+        $galleryPaths = [];
+        if (!empty($_FILES['gallery']['name']) && is_array($_FILES['gallery']['name'])) {
+            $destDir = __DIR__ . '/../../public/uploads/travel';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+            foreach ($_FILES['gallery']['name'] as $idx => $name) {
+                if (($_FILES['gallery']['error'][$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) { continue; }
+                $ext = pathinfo($name, PATHINFO_EXTENSION);
+                $file = 'gallery_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
+                $dest = $destDir . '/' . $file;
+                if (move_uploaded_file($_FILES['gallery']['tmp_name'][$idx], $dest)) {
+                    $galleryPaths[] = 'uploads/travel/' . $file;
+                }
+            }
+        }
+
+        $stmt = db()->prepare('
+            INSERT INTO travel_destinations (
+                agency_id, title, destination, description, duration_days, price, currency,
+                max_participants, min_participants, departure_location, departure_date, return_date,
+                booking_deadline, is_featured, is_published, children_allowed, image_path, gallery_paths,
+                includes, excludes, requirements, itinerary
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
+        ');
+        $stmt->execute([
+            $agencyId, $title, $destination, $description, $durationDays, $price, $currency,
+            $maxParticipants, $minParticipants, $departureLocation, $departureDate, $returnDate,
+            $bookingDeadline, $isFeatured, $isPublished, $childrenAllowed, $imagePath, json_encode($galleryPaths),
+            $includes, $excludes, $requirements, $itinerary
+        ]);
+		flash_set('success', 'Destination created.');
+		redirect(base_url('/admin/travel/destinations'));
+	}
 
 	// Scanner assignment methods removed - organizers manage their own devices
 

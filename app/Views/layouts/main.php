@@ -364,6 +364,18 @@ if ($isInAdminPath) {
                         </svg>
                         <span>Destinations</span>
                     </a>
+                    <a href="<?php echo base_url('/admin/travel/scanners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A2 2 0 0122 9.528V14.5a2 2 0 01-1.106 1.789L15 18m0-8l-6 3m6-3V18m-6-3l-4.553 2.276A2 2 0 012 14.472V9.5A2 2 0 013.106 7.711L9 5m0 10V5"></path>
+                        </svg>
+                        <span>Travel Scanners</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/travel/scanners/assignments'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10M7 16h10"></path>
+                        </svg>
+                        <span>Assign Travel Scanners</span>
+                    </a>
                     <a href="<?php echo base_url('/admin/travel-banners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
                         <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -438,6 +450,18 @@ if ($isInAdminPath) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         <span>Finance</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/scanners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A2 2 0 0122 9.528V14.5a2 2 0 01-1.106 1.789L15 18m0-8l-6 3m6-3V18m-6-3l-4.553 2.276A2 2 0 012 14.472V9.5A2 2 0 013.106 7.711L9 5m0 10V5"></path>
+                        </svg>
+                        <span>Admin Scanners</span>
+                    </a>
+                    <a href="<?php echo base_url('/scanner'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"></path>
+                        </svg>
+        				<span>System Scanner</span>
                     </a>
                 </div>
 
@@ -677,6 +701,18 @@ if ($isInAdminPath) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         <span>Finance</span>
+                    </a>
+                    <a href="<?php echo base_url('/admin/scanners'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A2 2 0 0122 9.528V14.5a2 2 0 01-1.106 1.789L15 18m0-8l-6 3m6-3V18m-6-3l-4.553 2.276A2 2 0 012 14.472V9.5A2 2 0 013.106 7.711L9 5m0 10V5"></path>
+                        </svg>
+                        <span>Admin Scanners</span>
+                    </a>
+                    <a href="<?php echo base_url('/scanner'); ?>" class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 12h18M3 19h18"></path>
+                        </svg>
+                        <span>System Scanner</span>
                     </a>
                 </div>
 

@@ -341,6 +341,21 @@ $pageTitle = 'Travel Agency Dashboard';
                     </div>
                 </a>
 
+                <!-- Universal Scanner (public link, only linked here) -->
+                <a href="<?php echo base_url('/scanner'); ?>" target="_blank" rel="noopener" class="group bg-gray-800 hover:bg-gray-700 rounded-xl p-6 border border-gray-700 hover:border-cyan-500/50 transition-all duration-200">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-lg p-3 transition-colors">
+                            <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-1">Open Universal Scanner</h3>
+                            <p class="text-gray-400 text-sm">Verify bookings with device code</p>
+                        </div>
+                    </div>
+                </a>
+
                 <!-- Profile -->
                 <a href="<?php echo base_url('/travel/profile'); ?>" class="group bg-gray-800 hover:bg-gray-700 rounded-xl p-6 border border-gray-700 hover:border-gray-500/50 transition-all duration-200">
                     <div class="flex items-center gap-4">

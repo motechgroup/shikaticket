@@ -21,50 +21,127 @@ class TicketsController
     public function download(): void
     {
         $code = trim($_GET['code'] ?? '');
-        if ($code === '') { echo 'Missing ticket code'; return; }
+        if ($code === '') { 
+            http_response_code(400);
+            echo 'Missing ticket code'; 
+            return; 
+        }
+        
         try {
             $stmt = db()->prepare('SELECT t.*, e.title, e.event_date, e.venue FROM tickets t JOIN order_items oi ON oi.id = t.order_item_id JOIN events e ON e.id = oi.event_id WHERE t.code = ? LIMIT 1');
             $stmt->execute([$code]);
             $ticket = $stmt->fetch();
-            if (!$ticket) { echo 'Ticket not found'; return; }
-
-            // Absolute filesystem path for QR image
-            $qrRel = $ticket['qr_path'] ?? '';
-            $qrAbs = realpath(__DIR__ . '/../../public/' . ltrim($qrRel, '/'));
+            if (!$ticket) { 
+                http_response_code(404);
+                echo 'Ticket not found'; 
+                return; 
+            }
 
             // Load TCPDF
             require_once __DIR__ . '/../../vendor/tecnickcom/tcpdf/tcpdf.php';
+            
+            // Create PDF with better settings
             $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
             $pdf->SetCreator('ShikaTicket');
             $pdf->SetAuthor('ShikaTicket');
             $pdf->SetTitle('Ticket #' . $code);
+            $pdf->SetSubject('Event Ticket');
             $pdf->setPrintHeader(false);
             $pdf->setPrintFooter(false);
             $pdf->SetMargins(15, 15, 15);
+            $pdf->SetAutoPageBreak(false);
             $pdf->AddPage();
 
-            $html = '<h2 style="font-family: helvetica;">Ticket #' . htmlspecialchars($code) . '</h2>';
-            $html .= '<div style="font-family: helvetica; font-size: 12px;">' .
-                     htmlspecialchars($ticket['title'] ?? '') . '<br>' .
-                     htmlspecialchars(($ticket['event_date'] ?? '') . ' • ' . ($ticket['venue'] ?? '')) .
-                     '</div><br/>';
-            $pdf->writeHTML($html, true, false, true, false, '');
-
-            if ($qrAbs && file_exists($qrAbs)) {
-                $pdf->Image($qrAbs, 15, 50, 80, 80, '', '', '', true);
+            // Header with logo
+            $logoPath = realpath(__DIR__ . '/../../public/uploads/site/logo.png');
+            if ($logoPath && file_exists($logoPath)) {
+                // Add logo at the top
+                $pdf->Image($logoPath, 15, 10, 30, 15, '', '', '', true);
+                $pdf->SetY(30);
+            }
+            
+            $pdf->SetFont('helvetica', 'B', 24);
+            $pdf->SetTextColor(239, 68, 68); // Red color
+            $pdf->Cell(0, 15, 'ShikaTicket', 0, 1, 'C');
+            
+            // Reset color
+            $pdf->SetTextColor(0, 0, 0);
+            
+            // Ticket info
+            $pdf->SetFont('helvetica', 'B', 18);
+            $pdf->Cell(0, 10, 'Ticket #' . $code, 0, 1, 'C');
+            
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell(0, 8, htmlspecialchars($ticket['title'] ?? ''), 0, 1, 'C');
+            
+            if (!empty($ticket['event_date'])) {
+                $date = date('M j, Y', strtotime($ticket['event_date']));
+                $venue = $ticket['venue'] ?? '';
+                $pdf->Cell(0, 8, $date . ($venue ? ' • ' . htmlspecialchars($venue) : ''), 0, 1, 'C');
             }
 
-            $pdf->SetY(140);
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->Cell(0, 10, 'Present this ticket at entry.', 0, 1);
+            // QR Code
+            $qrRel = $ticket['qr_path'] ?? '';
+            $qrAbs = '';
+            if ($qrRel) {
+                $qrAbs = realpath(__DIR__ . '/../../public/' . ltrim($qrRel, '/'));
+            }
+            
+            if ($qrAbs && file_exists($qrAbs)) {
+                // Center the QR code
+                $qrSize = 80; // mm
+                $pageWidth = $pdf->getPageWidth() - 30; // Account for margins
+                $qrX = ($pageWidth - $qrSize) / 2;
+                $pdf->Image($qrAbs, $qrX, 80, $qrSize, $qrSize, '', '', '', true);
+            } else {
+                // Fallback: generate QR code externally
+                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($code);
+                try {
+                    $qrData = @file_get_contents($qrUrl);
+                    if ($qrData !== false) {
+                        $tmpFile = tempnam(sys_get_temp_dir(), 'qr_');
+                        file_put_contents($tmpFile, $qrData);
+                        $qrSize = 80;
+                        $pageWidth = $pdf->getPageWidth() - 30;
+                        $qrX = ($pageWidth - $qrSize) / 2;
+                        $pdf->Image($tmpFile, $qrX, 80, $qrSize, $qrSize);
+                        unlink($tmpFile);
+                    }
+                } catch (\Throwable $e) {
+                    // Add placeholder text if QR generation fails
+                    $pdf->SetFont('helvetica', '', 10);
+                    $pdf->SetTextColor(128, 128, 128);
+                    $pdf->Cell(0, 10, 'QR Code: ' . $code, 0, 1, 'C');
+                    $pdf->SetTextColor(0, 0, 0);
+                }
+            }
 
+            // Footer instructions
+            $pdf->SetY(170);
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell(0, 10, 'Present this ticket at entry', 0, 1, 'C');
+            
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->Cell(0, 8, 'Keep this ticket safe and secure', 0, 1, 'C');
+            $pdf->Cell(0, 8, 'Generated on ' . date('M j, Y H:i'), 0, 1, 'C');
+
+            // Set proper headers
             $fileName = 'ticket-' . $code . '.pdf';
-            // Force download
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $fileName . '"');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            
+            // Output PDF
             $pdf->Output($fileName, 'D');
+            
         } catch (\Throwable $e) {
             error_log('Ticket PDF error: ' . $e->getMessage());
+            error_log('Ticket PDF trace: ' . $e->getTraceAsString());
             http_response_code(500);
-            echo 'Failed to generate PDF.';
+            header('Content-Type: text/plain');
+            echo 'Failed to generate PDF. Please try again later.';
         }
     }
 

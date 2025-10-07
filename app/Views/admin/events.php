@@ -1,6 +1,9 @@
 <?php /** @var array $events */ ?>
 <div class="max-w-6xl mx-auto px-4 py-10">
-	<h1 class="text-2xl font-semibold mb-6">Events</h1>
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">Events</h1>
+        <a class="btn btn-primary" href="<?php echo base_url('/admin/events/create'); ?>">Create Event</a>
+    </div>
 	<div class="card">
 		<?php if (empty($events)): ?>
 			<div class="p-6 text-gray-400">No events yet.</div>
