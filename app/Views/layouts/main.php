@@ -214,18 +214,18 @@
 </head>
 <body class="min-h-screen flex flex-col">
 <?php 
-// Check if we're in admin area - ALWAYS show admin sidebar on admin pages
+// Check if we're in admin area - show admin sidebar on admin pages EXCEPT login
 $currentUri = $_SERVER['REQUEST_URI'] ?? '';
 $currentRole = $_SESSION['role'] ?? 'none';
 $isInAdminPath = strpos($currentUri, '/admin') !== false;
+$isLoginPage = strpos($currentUri, '/admin/login') !== false;
 $hasAdminRole = in_array($currentRole, ['admin', 'manager', 'accountant']);
-$isAdminSidebar = $isInAdminPath; // Always show admin sidebar on admin pages
 
-// Force admin sidebar to be true when on admin pages
-if ($isInAdminPath) {
-    $isAdminSidebar = true;
-    error_log("Admin Debug - URI: $currentUri, Role: $currentRole, Sidebar: YES (forced)");
-}
+// Show admin sidebar on admin pages EXCEPT login page
+$isAdminSidebar = $isInAdminPath && !$isLoginPage;
+
+// Debug logging
+error_log("Admin Debug - URI: $currentUri, Role: $currentRole, IsAdminPath: " . ($isInAdminPath ? 'YES' : 'NO') . ", IsLoginPage: " . ($isLoginPage ? 'YES' : 'NO') . ", Sidebar: " . ($isAdminSidebar ? 'YES' : 'NO'));
 ?>
 <?php $isOrganizerSidebar = (strpos($_SERVER['REQUEST_URI'] ?? '', '/organizer') !== false) && isset($_SESSION['organizer_id']); ?>
 <?php if ($isAdminSidebar): ?>
