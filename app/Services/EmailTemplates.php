@@ -8,7 +8,7 @@ class EmailTemplates
 	public static function render(string $key, array $vars = []): string
 	{
 		$html = Setting::get('email.' . $key, '');
-		if ($html === '' && in_array($key, ['user_welcome','organizer_approved','travel_agency_welcome','travel_agency_approved'], true)) {
+		if ($html === '' && in_array($key, ['user_welcome','organizer_approved','travel_agency_welcome','travel_agency_approved','email_verification','ticket_confirmation','order_receipt','destination_booking_confirmation','withdrawal_request','withdrawal_status_update','event_reminder','payment_reminder','event_cancellation'], true)) {
 			// Load defaults if not set for common templates
 			$path = __DIR__ . '/../Views/emails/' . $key . '.php';
 			if (file_exists($path)) {

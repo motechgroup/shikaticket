@@ -12,6 +12,7 @@
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .header { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 30px; text-align: center; }
         .header h1 { margin: 0; font-size: 24px; }
+        .logo { height: 50px; margin-bottom: 15px; }
         .content { padding: 30px; }
         .code-box { background: #f8f9fa; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
         .reset-code { font-size: 32px; font-weight: bold; color: #ef4444; letter-spacing: 5px; margin: 10px 0; }
@@ -22,9 +23,10 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Password Reset Request</h1>
-        </div>
+    <div class="header">
+        <img src="<?php echo base_url('/uploads/site/logo.png'); ?>" alt="<?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?>" class="logo">
+        <h1>Password Reset Request</h1>
+    </div>
         
         <div class="content">
             <h2>Hello<?php echo !empty($userName) ? ' ' . htmlspecialchars($userName) : ''; ?>!</h2>
@@ -55,8 +57,9 @@
         </div>
         
         <div class="footer">
-            <p>This email was sent from <?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?><br>
+            <p>This email was sent from <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?><br>
             If you have any questions, please contact us.</p>
+            <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?>. All rights reserved. • Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.3'; ?></p>
         </div>
     </div>
 </body>
