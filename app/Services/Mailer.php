@@ -104,7 +104,17 @@ class Mailer
 			
 			// EHLO
 			$write('EHLO localhost');
-			$read();
+			
+			// Read all EHLO response lines (Gmail sends multiple lines)
+			$ehloResponse = '';
+			while (($line = $read()) !== false) {
+				$ehloResponse .= $line;
+				// Stop when we get a line that doesn't start with 250-
+				if (!preg_match('/^250-/', trim($line))) {
+					break;
+				}
+			}
+			error_log("EHLO Response: " . trim($ehloResponse));
 			
 			// Handle TLS encryption
 			if ($this->encryption === 'tls') { 
@@ -136,7 +146,15 @@ class Mailer
 					}
 					
 					$write('EHLO localhost'); 
-					$read(); 
+					// Read all EHLO response lines after TLS
+					$ehloResponseTls = '';
+					while (($line = $read()) !== false) {
+						$ehloResponseTls .= $line;
+						if (!preg_match('/^250-/', trim($line))) {
+							break;
+						}
+					}
+					error_log("EHLO Response after TLS: " . trim($ehloResponseTls)); 
 				} else {
 					error_log("STARTTLS not supported: $starttlsResponse");
 					fclose($socket);
