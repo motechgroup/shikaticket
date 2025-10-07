@@ -27,10 +27,11 @@ class Mailer
 	public function send(string $toEmail, string $subject, string $htmlBody): bool
 	{
 		// For local development (ngrok, localhost), log email instead of sending
-		if (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
-			strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
-			strpos($_SERVER['HTTP_HOST'] ?? '', 'ngrok') !== false) {
-			
+		$isLocalDev = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+					  strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false ||
+					  strpos($_SERVER['HTTP_HOST'] ?? '', 'ngrok') !== false;
+		
+		if ($isLocalDev) {
 			// Log the email instead of sending (for local development)
 			$logMessage = "LOCAL DEV EMAIL:\n" .
 						  "To: $toEmail\n" .
