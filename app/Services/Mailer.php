@@ -24,6 +24,11 @@ class Mailer
 		$this->fromName = Setting::get('smtp.from_name', 'ShikaTicket');
 	}
 
+	public function isConfigured(): bool
+	{
+		return !empty($this->host) && !empty($this->username) && !empty($this->password);
+	}
+
 	public function send(string $toEmail, string $subject, string $htmlBody): bool
 	{
 		// For local development (ngrok, localhost), log email instead of sending

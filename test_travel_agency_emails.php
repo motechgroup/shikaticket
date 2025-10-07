@@ -4,16 +4,14 @@
  * This will test the new travel agency email functionality
  */
 
+// Include necessary files FIRST to avoid header issues
+require_once 'config/config.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 echo "<h2>🏢 Travel Agency Email System Test</h2>";
 echo "<hr>";
-
-// Include necessary files
-require_once 'config/config.php';
-require_once 'app/Services/Mailer.php';
-require_once 'app/Services/EmailTemplates.php';
 
 echo "<h3>1. Email Templates Check</h3>";
 

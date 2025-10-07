@@ -4,15 +4,14 @@
  * This will test all email templates in the system
  */
 
+// Include necessary files FIRST to avoid header issues
+require_once 'config/config.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 echo "<h2>📧 Complete Email Templates Test</h2>";
 echo "<hr>";
-
-// Include necessary files
-require_once 'config/config.php';
-require_once 'app/Services/EmailTemplates.php';
 
 echo "<h3>1. All Email Templates Check</h3>";
 
