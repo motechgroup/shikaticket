@@ -51,10 +51,14 @@ class Mailer
 		
 		if ($this->host === '' || $this->username === '' || $this->password === '') {
 			// Fallback: simple mail()
+			error_log("Using PHP mail() fallback - SMTP credentials not configured");
 			$headers = "MIME-Version: 1.0\r\n" .
 				"Content-type:text/html;charset=UTF-8\r\n" .
-				"From: {$this->fromName} <{$this->fromEmail}>\r\n";
-			return @mail($toEmail, $subject, $htmlBody, $headers);
+				"From: {$this->fromName} <{$this->fromEmail}>\r\n" .
+				"Reply-To: {$this->fromEmail}\r\n";
+			$result = @mail($toEmail, $subject, $htmlBody, $headers);
+			error_log("PHP mail() result: " . ($result ? 'SUCCESS' : 'FAILED'));
+			return $result;
 		}
 
 		try {
