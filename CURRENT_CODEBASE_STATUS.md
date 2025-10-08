@@ -1,6 +1,6 @@
 # Current Codebase Status - Ticko/ShikaTicket
 **Last Updated:** October 1, 2025  
-**Version:** 1.0.3
+**Version:** 1.1.3
 
 ## Overview
 This document provides a comprehensive overview of the current codebase after reverting to an older stable version from GitHub and re-applying recent changes.
@@ -293,7 +293,7 @@ From code analysis:
 ## 📞 Support Information
 
 **System Name:** Ticko / ShikaTicket  
-**Version:** 1.0.3  
+**Version:** 1.1.3  
 **Last Major Update:** October 1, 2025  
 **PHP Version Required:** 7.4+  
 **Database:** MySQL 5.7+ / MariaDB 10.3+

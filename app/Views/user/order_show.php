@@ -35,7 +35,23 @@
 							<div class="text-sm text-gray-400 mb-1"><?php echo htmlspecialchars($t['title'] ?? ''); ?></div>
 							<div class="text-xs text-gray-500 mb-2"><?php echo htmlspecialchars(($t['event_date'] ?? '').' • '.($t['venue'] ?? '')); ?></div>
 							<div class="bg-gray-900 rounded flex items-center justify-center">
-								<img class="w-full h-48 object-contain" src="<?php echo base_url('/'.($t['qr_path'] ?? '')); ?>" alt="QR">
+								<?php
+								$qrPath = $t['qr_path'] ?? '';
+								$qrSrc = '';
+								
+								if ($qrPath) {
+									$fullPath = __DIR__ . '/../../' . ltrim($qrPath, '/');
+									if (file_exists($fullPath)) {
+										$qrSrc = base_url('/' . $qrPath);
+									}
+								}
+								
+								// Fallback to QR generation endpoint
+								if (!$qrSrc) {
+									$qrSrc = base_url('/tickets/qr?code=' . urlencode($t['code']) . '&v=' . time());
+								}
+								?>
+								<img class="w-full h-48 object-contain" src="<?php echo $qrSrc; ?>" alt="QR Code for <?php echo htmlspecialchars($t['code']); ?>" loading="lazy">
 							</div>
 							<div class="mt-3 flex items-center justify-between">
                                 <div>
