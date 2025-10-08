@@ -38,22 +38,34 @@
 								<?php
 								$qrPath = $t['qr_path'] ?? '';
 								$qrSrc = '';
+								$code = $t['code'];
 								
-								if ($qrPath) {
-									$fullPath = __DIR__ . '/../../' . ltrim($qrPath, '/');
-									if (file_exists($fullPath)) {
-										$qrSrc = base_url('/' . $qrPath);
+								// Try multiple possible QR file locations
+								$possiblePaths = [
+									$qrPath, // Original database path
+									'uploads/qrs/' . $code . '.png', // Standard location
+									'uploads/qrs/travel/' . $code . '.png', // Travel tickets
+									'qrs/' . $code . '.png', // Alternative location
+								];
+								
+								foreach ($possiblePaths as $testPath) {
+									if ($testPath) {
+										$fullPath = __DIR__ . '/../../' . ltrim($testPath, '/');
+										if (file_exists($fullPath)) {
+											$qrSrc = base_url('/' . $testPath);
+											break;
+										}
 									}
 								}
 								
 								// Fallback to QR generation endpoint
 								if (!$qrSrc) {
-									$qrSrc = base_url('/tickets/qr?code=' . urlencode($t['code']) . '&v=' . time());
+									$qrSrc = base_url('/tickets/qr?code=' . urlencode($code) . '&v=' . time());
 								}
 								
 								// Additional fallback to external QR service
-								if (!$qrSrc || !@getimagesize($qrSrc)) {
-									$qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($t['code']);
+								if (!$qrSrc) {
+									$qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($code);
 								}
 								?>
 								<img class="w-full h-48 object-contain" src="<?php echo $qrSrc; ?>" alt="QR Code for <?php echo htmlspecialchars($t['code']); ?>" loading="lazy">
