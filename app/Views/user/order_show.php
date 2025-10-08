@@ -50,6 +50,11 @@
 								if (!$qrSrc) {
 									$qrSrc = base_url('/tickets/qr?code=' . urlencode($t['code']) . '&v=' . time());
 								}
+								
+								// Additional fallback to external QR service
+								if (!$qrSrc || !@getimagesize($qrSrc)) {
+									$qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($t['code']);
+								}
 								?>
 								<img class="w-full h-48 object-contain" src="<?php echo $qrSrc; ?>" alt="QR Code for <?php echo htmlspecialchars($t['code']); ?>" loading="lazy">
 							</div>
