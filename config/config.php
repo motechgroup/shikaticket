@@ -12,7 +12,7 @@ define('DB_PASS', '');
 define('ENVIRONMENT', $_ENV['APP_ENV'] ?? 'production'); // development, production
 define('DEBUG_MODE', ENVIRONMENT === 'development');
 // Application version
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.0.3'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.1.3'); }
 
 // Simple autoloader for security classes
 spl_autoload_register(function ($class) {
