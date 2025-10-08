@@ -16,7 +16,7 @@
         </div>
         <div>
             <label class="block text-sm mb-1">User Login OTP</label>
-            <textarea class="textarea" name="templates[user_otp]" rows="2"><?php echo htmlspecialchars($templates['user_otp'] ?? 'Your Ticko login code is {{otp}}'); ?></textarea>
+            <textarea class="textarea" name="templates[user_otp]" rows="2"><?php echo htmlspecialchars($templates['user_otp'] ?? 'Your ShikaTicket login code is {{otp}}'); ?></textarea>
             <div class="text-xs text-gray-400 mt-1">Placeholders: {{otp}}</div>
         </div>
         <div>
@@ -51,7 +51,7 @@
             </div>
             <div>
                 <label class="block text-sm mb-1">Test Message</label>
-                <textarea name="message" class="textarea" rows="3" placeholder="Test SMS from Ticko Admin Panel">Test SMS from Ticko Admin Panel - Gateway is working correctly!</textarea>
+                <textarea name="message" class="textarea" rows="3" placeholder="Test SMS from ShikaTicket Admin Panel">Test SMS from ShikaTicket Admin Panel - Gateway is working correctly!</textarea>
             </div>
             <button type="submit" class="btn btn-secondary">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

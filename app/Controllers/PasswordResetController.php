@@ -330,7 +330,7 @@ class PasswordResetController
      */
     private function sendResetCode(string $userType, array $user, string $resetCode, string $token, string $email, string $phone): void
     {
-        $siteName = \App\Models\Setting::get('site.name', 'Ticko');
+        $siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
         $siteUrl = \App\Models\Setting::get('site.url', base_url());
         $resetUrl = base_url('/password-reset/verify?token=' . $token);
 

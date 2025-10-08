@@ -145,7 +145,7 @@
                                 $qrInline = '';
                                 try {
                                     $rel = $ticket['qr_path'] ?? '';
-                                    $abs = $rel !== '' ? (__DIR__ . '/../../public/' . ltrim($rel, '/')) : '';
+                                    $abs = $rel !== '' ? (__DIR__ . '/../../' . ltrim($rel, '/')) : '';
                                     $png = '';
                                     if ($abs !== '' && is_file($abs)) {
                                         $png = @file_get_contents($abs);

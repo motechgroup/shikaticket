@@ -267,7 +267,7 @@ class PaymentController
         $consumerKey = Setting::get('payments.mpesa.consumer_key', '');
         $consumerSecret = Setting::get('payments.mpesa.consumer_secret', '');
         $env = Setting::get('payments.mpesa.env', 'sandbox');
-        // If a custom https callback is configured (e.g., ngrok/public URL), use it; otherwise default to local base_url
+        // If a custom https callback is configured (e.g., ngrok URL), use it; otherwise default to local base_url
         $configuredCallback = Setting::get('payments.mpesa.callback_url', '');
         $callbackUrl = $configuredCallback !== '' ? $configuredCallback : base_url('/pay/mpesa/callback');
         // Safety: if admin stored only a base URL, append the required callback path
@@ -467,7 +467,7 @@ class PaymentController
                 $qrDir = __DIR__ . '/../../uploads/qrs';
                 if (!is_dir($qrDir)) { @mkdir($qrDir, 0777, true); }
                 $qrRel = 'uploads/qrs/' . $code . '.png';
-                $qrAbs = __DIR__ . '/../../public/' . $qrRel;
+                $qrAbs = __DIR__ . '/../../' . $qrRel;
                 @file_put_contents($qrAbs, @file_get_contents($qrUrl));
                 $ins->execute([$itemId, $code, $qrRel, $item['tier'] ?? 'regular']);
                 $codes[] = ['code'=>$code, 'qr'=>$qrRel];
@@ -1054,7 +1054,7 @@ class PaymentController
                         $qrDir = __DIR__ . '/../../uploads/qrs';
                         if (!is_dir($qrDir)) { @mkdir($qrDir, 0777, true); }
                         $qrRel = 'uploads/qrs/' . $code . '.png';
-                        $qrAbs = __DIR__ . '/../../public/' . $qrRel;
+                        $qrAbs = __DIR__ . '/../../' . $qrRel;
                         @file_put_contents($qrAbs, @file_get_contents($qrUrl));
                         $ins->execute([$itemId, $code, $qrRel, $item['tier'] ?? 'regular']);
                         $codes[] = ['code'=>$code, 'qr'=>$qrRel];

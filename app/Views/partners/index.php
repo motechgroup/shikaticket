@@ -1,7 +1,7 @@
 <div class="max-w-6xl mx-auto px-4 py-12">
     <div class="grid md:grid-cols-2 gap-8 items-start">
         <div>
-            <h1 class="text-3xl md:text-4xl font-bold mb-4">Partner with <?php echo htmlspecialchars(\App\Models\Setting::get('site.name', 'Ticko')); ?></h1>
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">Partner with <?php echo htmlspecialchars(\App\Models\Setting::get('site.name', 'ShikaTicket')); ?></h1>
             <p class="text-gray-300 leading-relaxed mb-4">We collaborate with companies, organizations, celebrities and institutions on events, CSR, charities and strategic initiatives. Join us to create impact and deliver memorable experiences for audiences.</p>
             <ul class="list-disc pl-5 text-gray-300 space-y-2 mb-6">
                 <li>Brand exposure across our platform and events</li>

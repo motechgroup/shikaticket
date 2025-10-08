@@ -243,7 +243,7 @@ class PagesController
         $stats = $this->getPlatformStats();
         
         // Get site settings for branding
-        $siteTitle = \App\Models\Setting::get('site.title') ?? 'Ticko';
+        $siteTitle = \App\Models\Setting::get('site.title') ?? 'ShikaTicket';
         $siteLogo = \App\Models\Setting::get('site.logo') ?? '/uploads/site/logo.png';
         
         standalone_view('hotels/coming_soon', compact('stats', 'siteTitle', 'siteLogo'));
@@ -414,8 +414,8 @@ class PagesController
     private function sendHotelApplicationNotification(array $data): void
     {
         try {
-            $adminEmail = \App\Models\Setting::get('admin.email') ?? 'admin@ticko.com';
-            $siteTitle = \App\Models\Setting::get('site.title') ?? 'Ticko';
+            $adminEmail = \App\Models\Setting::get('admin.email') ?? 'admin@shikaticket.com';
+            $siteTitle = \App\Models\Setting::get('site.title') ?? 'ShikaTicket';
             
             $subject = "New Hotel Application - {$data['hotel_name']}";
             $message = "

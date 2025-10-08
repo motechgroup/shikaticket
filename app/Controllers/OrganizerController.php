@@ -223,7 +223,7 @@ class OrganizerController
 			$expires = date('Y-m-d H:i:s', time()+600);
 			db()->prepare('INSERT INTO organizer_tokens (organizer_id, token, type, expires_at) VALUES (?, ?, ?, ?)')
 			  ->execute([$_SESSION['organizer_id'], $otp, 'phone_otp', $expires]);
-			try { $sms = new \App\Services\Sms(); if ($sms->isConfigured()) { $sms->send($phone, 'Your Ticko OTP: ' . $otp); } } catch (\Throwable $e) {}
+			try { $sms = new \App\Services\Sms(); if ($sms->isConfigured()) { $sms->send($phone, 'Your ShikaTicket OTP: ' . $otp); } } catch (\Throwable $e) {}
 		}
 		$sql = 'UPDATE organizers SET full_name = :full, email = :email' . $setAvatar . ' WHERE id = :id';
 		$stmt = db()->prepare($sql);
@@ -247,7 +247,7 @@ class OrganizerController
 		$expires = date('Y-m-d H:i:s', time()+600);
 		db()->prepare('INSERT INTO organizer_tokens (organizer_id, token, type, expires_at) VALUES (?, ?, ?, ?)')
 		  ->execute([$_SESSION['organizer_id'], $otp, 'phone_otp', $expires]);
-		try { $sms = new \App\Services\Sms(); if ($sms->isConfigured()) { $sms->send($phone, 'Your Ticko OTP: ' . $otp); } } catch (\Throwable $e) {}
+		try { $sms = new \App\Services\Sms(); if ($sms->isConfigured()) { $sms->send($phone, 'Your ShikaTicket OTP: ' . $otp); } } catch (\Throwable $e) {}
 		flash_set('success', 'OTP sent to your phone.');
 		redirect(base_url('/organizer/profile'));
 	}

@@ -1253,7 +1253,7 @@ class AdminController
 
 	private function sendUserCredentials($userId, $email, $password, $phone, $sendEmail, $sendSms): void
 	{
-		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
 		$loginUrl = base_url('/login');
 		
 		// Send email
@@ -1319,7 +1319,7 @@ class AdminController
 
 	private function sendOrganizerCredentials($organizerId, $email, $password, $phone, $sendEmail, $sendSms): void
 	{
-		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
 		$loginUrl = base_url('/organizer/login');
 		
 		// Send email
@@ -1385,7 +1385,7 @@ class AdminController
 
 	private function sendTravelAgencyCredentials($agencyId, $email, $password, $phone, $sendEmail, $sendSms): void
 	{
-		$siteName = \App\Models\Setting::get('site.name', 'Ticko');
+		$siteName = \App\Models\Setting::get('site.name', 'ShikaTicket');
 		$loginUrl = base_url('/travel/login');
 		
 		// Send email
@@ -1643,7 +1643,7 @@ class AdminController
         Setting::set('payments.flutterwave.encryption_key', trim($_POST['flutterwave_encryption_key'] ?? ''));
 
         // Site settings
-        Setting::set('site.name', trim($_POST['site_name'] ?? 'Ticko'));
+        Setting::set('site.name', trim($_POST['site_name'] ?? 'ShikaTicket'));
         Setting::set('site.description', trim($_POST['site_description'] ?? ''));
         
         // Contact information
@@ -1786,8 +1786,8 @@ class AdminController
         $templates = [
             'welcome_user' => Setting::get('sms.welcome_user', 'Welcome to ShikaTicket!'),
             'payment_success' => Setting::get('sms.payment_success', 'Order #{{order_id}} confirmed. Tickets: {{tickets}}'),
-            'user_otp' => Setting::get('sms.user_otp', 'Your Ticko login code is {{otp}}'),
-            'organizer_otp' => Setting::get('sms.organizer_otp', 'Your Ticko OTP: {{otp}}'),
+            'user_otp' => Setting::get('sms.user_otp', 'Your ShikaTicket login code is {{otp}}'),
+            'organizer_otp' => Setting::get('sms.organizer_otp', 'Your ShikaTicket OTP: {{otp}}'),
             'withdrawal_request' => Setting::get('sms.withdrawal_request', 'We received your withdrawal request of KES {{amount}}'),
             'travel_booking_confirmed' => Setting::get('sms.travel_booking_confirmed', 'Travel booking confirmed! Destination: {{destination}}. Ticket Code: {{ticket_code}}. Booking Reference: {{booking_reference}}. View ticket: {{ticket_link}}. Contact: {{agency_name}} at {{agency_phone}}'),
         ];
@@ -1809,7 +1809,7 @@ class AdminController
         require_admin();
         
         $phoneNumber = $_POST['phone_number'] ?? '';
-        $message = $_POST['message'] ?? 'Test SMS from Ticko Admin Panel';
+        $message = $_POST['message'] ?? 'Test SMS from ShikaTicket Admin Panel';
         
         if (empty($phoneNumber)) {
             flash_set('error', 'Phone number is required.');

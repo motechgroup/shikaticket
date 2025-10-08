@@ -12,7 +12,7 @@ $userTypeLabel = $userTypeLabels[$userType] ?? 'User';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Reset Password - <?php echo htmlspecialchars(\App\Models\Setting::get('site.name', 'Ticko')); ?></title>
+    <title>Reset Password - <?php echo htmlspecialchars(\App\Models\Setting::get('site.name', 'ShikaTicket')); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>

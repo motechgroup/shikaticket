@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset - <?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?></title>
+    <title>Password Reset - <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?></title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -30,7 +30,7 @@
         <div class="content">
             <h2>Hello <?php echo htmlspecialchars($organizerName ?? 'Organizer'); ?>!</h2>
             
-            <p>We received a request to reset your password for your <?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?> organizer account.</p>
+            <p>We received a request to reset your password for your <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?> organizer account.</p>
             
             <div class="code-box">
                 <p><strong>Your Password Reset Code:</strong></p>
@@ -52,7 +52,7 @@
             <p>If you have any questions about your organizer account, please contact our support team.</p>
             
             <p>Best regards,<br>
-            The <?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?> Team</p>
+            The <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?> Team</p>
         </div>
         
         <div class="footer">

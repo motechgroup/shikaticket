@@ -65,9 +65,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-6">
                 <div class="flex items-center">
-                    <a href="<?php echo base_url('/'); ?>" class="flex items-center space-x-3">
+                    <a href="<?php echo base_url('/'); ?>" class="flex items-center">
                         <img src="<?php echo base_url($siteLogo); ?>" alt="<?php echo htmlspecialchars($siteTitle); ?>" class="h-10 w-auto">
-                        <span class="text-2xl font-bold text-white"><?php echo htmlspecialchars($siteTitle); ?></span>
                     </a>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
@@ -499,9 +498,8 @@
     <footer class="bg-black/40 py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <div class="flex items-center justify-center space-x-3 mb-4">
+                <div class="flex items-center justify-center mb-4">
                     <img src="<?php echo base_url($siteLogo); ?>" alt="<?php echo htmlspecialchars($siteTitle); ?>" class="h-8 w-auto">
-                    <span class="text-xl font-bold text-white"><?php echo htmlspecialchars($siteTitle); ?></span>
                 </div>
                 <p class="text-gray-400 mb-6">
                     Kenya's premier platform for events, travel, and soon - hotels.

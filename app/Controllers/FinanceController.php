@@ -435,7 +435,7 @@ class FinanceController
         
         $logoPath = null;
         foreach ($possibleLogos as $logo) {
-            $testPath = __DIR__ . '/../../public/' . $logo;
+            $testPath = __DIR__ . '/../../' . $logo;
             if (file_exists($testPath)) {
                 $logoPath = $testPath;
                 break;

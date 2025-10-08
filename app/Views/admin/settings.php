@@ -40,7 +40,7 @@
         </div>
         <div data-tab-panel="general">
             <label class="block text-sm mb-1">Site Name</label>
-            <input name="site_name" value="<?php echo htmlspecialchars($settings['site.name'] ?? 'Ticko'); ?>" class="input">
+            <input name="site_name" value="<?php echo htmlspecialchars($settings['site.name'] ?? 'ShikaTicket'); ?>" class="input">
         </div>
         <div data-tab-panel="general">
             <label class="block text-sm mb-1">Site Description</label>
@@ -225,7 +225,7 @@
                     <option value="none" <?php echo (($settings['smtp.encryption'] ?? 'tls') === 'none') ? 'selected' : ''; ?>>None</option>
                 </select>
                 <input class="input" name="smtp_from_email" placeholder="From Email" value="<?php echo htmlspecialchars($settings['smtp.from_email'] ?? ''); ?>">
-                <input class="input" name="smtp_from_name" placeholder="From Name" value="<?php echo htmlspecialchars($settings['smtp.from_name'] ?? 'Ticko'); ?>">
+                <input class="input" name="smtp_from_name" placeholder="From Name" value="<?php echo htmlspecialchars($settings['smtp.from_name'] ?? 'ShikaTicket'); ?>">
             </div>
             <div class="mt-6 flex items-center gap-3">
                 <a class="btn btn-secondary" href="<?php echo base_url('/admin/email-templates'); ?>">Manage Email Templates</a>

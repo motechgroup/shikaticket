@@ -598,7 +598,7 @@
 		<div class="p-4 border-b border-gray-700 flex-shrink-0">
 			<div class="flex items-center justify-between mb-3">
 				<div class="flex items-center gap-3">
-					<img src="<?php echo base_url('/uploads/site/logo.png'); ?>" alt="Ticko Logo" class="w-8 h-8 rounded-lg">
+					<img src="<?php echo base_url('/uploads/site/logo.png'); ?>" alt="ShikaTicket Logo" class="w-8 h-8 rounded-lg">
 					<h2 class="text-lg font-semibold text-white">Admin Panel</h2>
 				</div>
 				<button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors" aria-label="Close menu">
