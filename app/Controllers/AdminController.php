@@ -1757,23 +1757,25 @@ class AdminController
 	public function emailTemplates(): void
 	{
 		require_admin();
+		
+		// Get comprehensive template content with fallbacks
 		$templates = [
-			'user_welcome' => Setting::get('email.user_welcome', ''),
-			'organizer_approved' => Setting::get('email.organizer_approved', ''),
-			'travel_agency_welcome' => Setting::get('email.travel_agency_welcome', ''),
-			'travel_agency_approved' => Setting::get('email.travel_agency_approved', ''),
-			'password_reset_user' => Setting::get('email.password_reset_user', ''),
-			'password_reset_travel' => Setting::get('email.password_reset_travel', ''),
-			'password_reset_organizer' => Setting::get('email.password_reset_organizer', ''),
-			'email_verification' => Setting::get('email.email_verification', ''),
-			'ticket_confirmation' => Setting::get('email.ticket_confirmation', ''),
-			'order_receipt' => Setting::get('email.order_receipt', ''),
-			'destination_booking_confirmation' => Setting::get('email.destination_booking_confirmation', ''),
-			'withdrawal_request' => Setting::get('email.withdrawal_request', ''),
-			'withdrawal_status_update' => Setting::get('email.withdrawal_status_update', ''),
-			'event_reminder' => Setting::get('email.event_reminder', ''),
-			'payment_reminder' => Setting::get('email.payment_reminder', ''),
-			'event_cancellation' => Setting::get('email.event_cancellation', ''),
+			'user_welcome' => Setting::get('email.user_welcome', $this->getDefaultUserWelcomeTemplate()),
+			'organizer_approved' => Setting::get('email.organizer_approved', $this->getDefaultOrganizerApprovedTemplate()),
+			'travel_agency_welcome' => Setting::get('email.travel_agency_welcome', $this->getDefaultTravelAgencyWelcomeTemplate()),
+			'travel_agency_approved' => Setting::get('email.travel_agency_approved', $this->getDefaultTravelAgencyApprovedTemplate()),
+			'password_reset_user' => Setting::get('email.password_reset_user', $this->getDefaultPasswordResetUserTemplate()),
+			'password_reset_travel' => Setting::get('email.password_reset_travel', $this->getDefaultPasswordResetTravelTemplate()),
+			'password_reset_organizer' => Setting::get('email.password_reset_organizer', $this->getDefaultPasswordResetOrganizerTemplate()),
+			'email_verification' => Setting::get('email.email_verification', $this->getDefaultEmailVerificationTemplate()),
+			'ticket_confirmation' => Setting::get('email.ticket_confirmation', $this->getDefaultTicketConfirmationTemplate()),
+			'order_receipt' => Setting::get('email.order_receipt', $this->getDefaultOrderReceiptTemplate()),
+			'destination_booking_confirmation' => Setting::get('email.destination_booking_confirmation', $this->getDefaultDestinationBookingTemplate()),
+			'withdrawal_request' => Setting::get('email.withdrawal_request', $this->getDefaultWithdrawalRequestTemplate()),
+			'withdrawal_status_update' => Setting::get('email.withdrawal_status_update', $this->getDefaultWithdrawalStatusUpdateTemplate()),
+			'event_reminder' => Setting::get('email.event_reminder', $this->getDefaultEventReminderTemplate()),
+			'payment_reminder' => Setting::get('email.payment_reminder', $this->getDefaultPaymentReminderTemplate()),
+			'event_cancellation' => Setting::get('email.event_cancellation', $this->getDefaultEventCancellationTemplate()),
 		];
 		view('admin/email_templates', compact('templates'));
 	}
@@ -2833,6 +2835,88 @@ class AdminController
         $order = $stmt->fetch();
         if (!$order) { echo 'Order not found'; return; }
         view('admin/marketing_order', compact('order'));
+    }
+
+    // Default Email Template Methods
+    
+    private function getDefaultUserWelcomeTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/user_welcome.php');
+    }
+    
+    private function getDefaultOrganizerApprovedTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/organizer_approved.php');
+    }
+    
+    private function getDefaultTravelAgencyWelcomeTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/travel_agency_welcome.php');
+    }
+    
+    private function getDefaultTravelAgencyApprovedTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/travel_agency_approved.php');
+    }
+    
+    private function getDefaultPasswordResetUserTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/password_reset_user.php');
+    }
+    
+    private function getDefaultPasswordResetTravelTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/password_reset_travel.php');
+    }
+    
+    private function getDefaultPasswordResetOrganizerTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/password_reset_organizer.php');
+    }
+    
+    private function getDefaultEmailVerificationTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/email_verification.php');
+    }
+    
+    private function getDefaultTicketConfirmationTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/ticket_confirmation.php');
+    }
+    
+    private function getDefaultOrderReceiptTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/order_receipt.php');
+    }
+    
+    private function getDefaultDestinationBookingTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/destination_booking_confirmation.php');
+    }
+    
+    private function getDefaultWithdrawalRequestTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/withdrawal_request.php');
+    }
+    
+    private function getDefaultWithdrawalStatusUpdateTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/withdrawal_status_update.php');
+    }
+    
+    private function getDefaultEventReminderTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/event_reminder.php');
+    }
+    
+    private function getDefaultPaymentReminderTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/payment_reminder.php');
+    }
+    
+    private function getDefaultEventCancellationTemplate(): string
+    {
+        return file_get_contents(__DIR__ . '/../Views/emails/event_cancellation.php');
     }
 
     // end of class

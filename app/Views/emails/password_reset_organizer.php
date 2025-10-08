@@ -23,6 +23,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <img src="<?php echo base_url('/uploads/site/logo.png'); ?>" alt="<?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?>" style="height: 50px; margin-bottom: 15px;">
             <h1>Organizer Password Reset</h1>
         </div>
         
@@ -55,8 +56,9 @@
         </div>
         
         <div class="footer">
-            <p>This email was sent from <?php echo htmlspecialchars($siteTitle ?? 'Ticko'); ?><br>
+            <p>This email was sent from <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?><br>
             If you have any questions, please contact us.</p>
+            <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteTitle ?? 'ShikaTicket'); ?>. All rights reserved. • Version <?php echo defined('APP_VERSION') ? APP_VERSION : '1.0.3'; ?></p>
         </div>
     </div>
 </body>
