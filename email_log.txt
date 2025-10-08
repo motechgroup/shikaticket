@@ -1,14 +1,28 @@
 LOCAL DEV EMAIL:
 To: othedj@gmail.com
-Subject: Test Email from Web Environment - 2025-10-07 20:41:58
+Subject: Test Email from ShikaTicket
 From: ShikaTicket <hello@shikaticket.com>
-Body: <h1>🎉 Web Environment Test</h1><p>This email was processed in web environment.</p>
-Time: 2025-10-07 20:41:58
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:42:43
 ---
 LOCAL DEV EMAIL:
 To: othedj@gmail.com
-Subject: Current Test - 2025-10-07 20:47:32
+Subject: Test Email from ShikaTicket
 From: ShikaTicket <hello@shikaticket.com>
-Body: <h1>Current Test</h1><p>Testing current email behavior.</p>
-Time: 2025-10-07 20:47:32
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:45:24
+---
+LOCAL DEV EMAIL:
+To: othedj@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <hello@shikaticket.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 20:46:20
+---
+LOCAL DEV EMAIL:
+To: thegusiimusic7@gmail.com
+Subject: Test Email from ShikaTicket
+From: ShikaTicket <motechgroupkenya@gmail.com>
+Body: <h1>SMTP Test Successful</h1><p>If you can read this, your SMTP settings are working.</p>
+Time: 2025-10-07 23:26:54
 ---

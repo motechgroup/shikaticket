@@ -12,12 +12,12 @@ define('DB_PASS', '');
 define('ENVIRONMENT', $_ENV['APP_ENV'] ?? 'production'); // development, production
 define('DEBUG_MODE', ENVIRONMENT === 'development');
 // Application version
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.0.2'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.0.3'); }
 
 // Simple autoloader for security classes
 spl_autoload_register(function ($class) {
     $prefix = 'App\\';
-    $base_dir = __DIR__ . '/../app/';
+    $base_dir = __DIR__ . '/app/';
     
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
@@ -149,7 +149,7 @@ function verify_csrf(): void {
     }
 }
 
-// Base URL helper (assumes project root points to /public)
+// Base URL helper (with clean URLs - no /public in URL)
 function base_url(string $path = ''): string {
 	$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 	$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -168,31 +168,35 @@ function base_url(string $path = ''): string {
 	$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 	$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 	
-	// Detect base path
+	// Detect base path (WITHOUT /public in the URL)
 	$base = '';
 	
-	// Production server: shikaticket.com (always use /public)
+	// Production server: shikaticket.com (clean URL - no /public)
 	if (strpos($host, 'shikaticket.com') !== false) {
-		$base = '/public';
+		$base = '';
 	}
-	// Ngrok or local with /ticko/public/
+	// Ngrok development (clean URL - no /public)
 	elseif (strpos($host, 'ngrok') !== false) {
-		$base = '/ticko/public';
+		$base = '/ticko';
 	} 
-	// Local development with /ticko/public/
-	elseif (strpos($requestUri, '/ticko/public/') !== false || strpos($scriptName, '/ticko/public/') !== false) {
-		$base = '/ticko/public';
+	// Local development with /ticko/ (clean URL - no /public)
+	elseif (strpos($requestUri, '/ticko/') !== false || strpos($scriptName, '/ticko/') !== false) {
+		$base = '/ticko';
 	} 
-	// Fallback: try to detect from SCRIPT_NAME
+	// Fallback: try to detect from SCRIPT_NAME and remove /public
 	elseif (strpos($scriptName, '/public/') !== false) {
-		$base = '/public';
+		$parts = explode('/public/', $scriptName);
+		$base = rtrim($parts[0], '/');
+		if ($base === '.' || $base === '') {
+			$base = '';
+		}
 	}
 	// Last resort: use dirname of script
 	else {
-		$base = rtrim(dirname($scriptName), '/');
+		$base = rtrim(dirname(dirname($scriptName)), '/');
 		// Remove extra dots and ensure clean path
 		$base = str_replace('/..', '', $base);
-		if ($base === '.' || $base === '') {
+		if ($base === '.' || $base === '' || $base === '/') {
 			$base = '';
 		}
 	}

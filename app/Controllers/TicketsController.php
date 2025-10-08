@@ -53,7 +53,7 @@ class TicketsController
             $pdf->AddPage();
 
             // Header with logo
-            $logoPath = realpath(__DIR__ . '/../../public/uploads/site/logo.png');
+            $logoPath = realpath(__DIR__ . '/../../uploads/site/logo.png');
             if ($logoPath && file_exists($logoPath)) {
                 // Add logo at the top
                 $pdf->Image($logoPath, 15, 10, 30, 15, '', '', '', true);
@@ -84,7 +84,7 @@ class TicketsController
             $qrRel = $ticket['qr_path'] ?? '';
             $qrAbs = '';
             if ($qrRel) {
-                $qrAbs = realpath(__DIR__ . '/../../public/' . ltrim($qrRel, '/'));
+                $qrAbs = realpath(__DIR__ . '/../../' . ltrim($qrRel, '/'));
             }
             
             if ($qrAbs && file_exists($qrAbs)) {
@@ -161,7 +161,7 @@ class TicketsController
 
             // Resolve QR source
             $qrRel = $t['qr_path'] ?? '';
-            $qrAbs = $qrRel ? realpath(__DIR__ . '/../../public/' . ltrim($qrRel, '/')) : '';
+            $qrAbs = $qrRel ? realpath(__DIR__ . '/../../' . ltrim($qrRel, '/')) : '';
             $qrSrc = '';
             $tmp = '';
             if ($qrAbs && file_exists($qrAbs)) {
@@ -225,7 +225,7 @@ class TicketsController
             $stmt->execute([$code]);
             $row = $stmt->fetch();
             $qrRel = $row['qr_path'] ?? '';
-            $qrAbs = $qrRel !== '' ? (__DIR__ . '/../../public/' . ltrim($qrRel, '/')) : '';
+            $qrAbs = $qrRel !== '' ? (__DIR__ . '/../../' . ltrim($qrRel, '/')) : '';
 
             header('Content-Type: image/png');
             header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -243,7 +243,7 @@ class TicketsController
                 echo $data;
                 // Attempt to persist locally for future requests
                 try {
-                    $dir = __DIR__ . '/../../public/uploads/qrs/travel/';
+                    $dir = __DIR__ . '/../../uploads/qrs/travel/';
                     if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
                     $rel = 'uploads/qrs/travel/' . $code . '.png';
                     @file_put_contents($dir . $code . '.png', $data);

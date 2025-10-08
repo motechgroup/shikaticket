@@ -155,7 +155,7 @@
                                         $png = @file_get_contents($external);
                                         // Best-effort persist for next time
                                         if ($png !== false) {
-                                            $dir = __DIR__ . '/../../public/uploads/qrs/travel/';
+                                            $dir = __DIR__ . '/../../uploads/qrs/travel/';
                                             if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
                                             @file_put_contents($dir . $ticket['ticket_code'] . '.png', $png);
                                         }

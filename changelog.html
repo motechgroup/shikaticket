@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticko – Changelog v1.0.2</title>
+    <link rel="icon" href="/ticko/public/uploads/site/favicon_1758739154.png">
+    <style>
+        :root {
+            --bg: #0b1220;
+            --panel: #121a2b;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --brand: #3b82f6;
+            --ok: #10b981;
+            --warn: #f59e0b;
+            --bad: #ef4444;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            color: var(--text); background: radial-gradient(1200px 800px at 10% -10%, #122142 0%, transparent 60%), var(--bg);
+            line-height: 1.6;
+        }
+        .wrap { max-width: 980px; margin: 32px auto; padding: 0 16px; }
+        .card { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+        header.card { padding: 28px; display: flex; align-items: center; justify-content: space-between; }
+        .h1 { margin: 0; font-size: 28px; letter-spacing: .2px; }
+        .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { font-size: 12px; color: #fff; padding: 6px 10px; border-radius: 999px; background: #1f2937; border: 1px solid rgba(255,255,255,0.08); }
+        .b-brand { background: #1e3a8a; }
+        .b-date { background: #065f46; }
+        .b-stable { background: #0f766e; }
+        section.card { padding: 24px; margin-top: 16px; }
+        h2 { margin: 0 0 12px; font-size: 20px; border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 8px; }
+        h3 { margin: 18px 0 8px; font-size: 16px; color: #cbd5e1; }
+        ul { margin: 8px 0 16px 20px; }
+        li { margin: 4px 0; color: #d1d5db; }
+        .toc a { color: #93c5fd; text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        .muted { color: var(--muted); }
+        .footer { text-align: center; color: var(--muted); margin: 24px 0; font-size: 12px; }
+        code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; }
+    </style>
+    <meta name="robots" content="noindex">
+    <meta name="color-scheme" content="dark">
+</head>
+<body>
+    <div class="wrap">
+        <header class="card">
+            <div>
+                <div class="muted">ShikaTicket</div>
+                <h1 class="h1">Changelog</h1>
+            </div>
+            <div class="badges">
+                <span class="badge b-brand">v1.0.2</span>
+                <span class="badge b-date">Released: 2025-10-01</span>
+                <span class="badge b-stable">Stable</span>
+            </div>
+        </header>
+
+        <section class="card toc">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><a href="#v102">1.0.2 — Activity Logs & Enhanced Audit Trail</a></li>
+                <li><a href="#v101">1.0.1 — Admin destination/agency editing + HTML changelog</a></li>
+                <li><a href="#v100">1.0.0 — First public release</a></li>
+                <li><a href="#highlights">Highlights</a></li>
+                <li><a href="#added">Added</a></li>
+                <li><a href="#changed">Changed</a></li>
+                <li><a href="#removed">Removed</a></li>
+                <li><a href="#fixed">Fixed</a></li>
+                <li><a href="#security">Security</a></li>
+                <li><a href="#modules">Modules Overview</a></li>
+            </ul>
+        </section>
+
+        <section id="v102" class="card">
+            <h2>1.0.2 — Activity Logs & Enhanced Audit Trail</h2>
+            <p class="muted">Released: October 1, 2025</p>
+            <h3>🎯 Highlights</h3>
+            <ul>
+                <li><strong>Activity Logs Dashboard</strong> for super admins to monitor all user actions</li>
+                <li><strong>Role-based audit trail</strong> with manager/accountant activity tracking</li>
+                <li><strong>Enhanced security monitoring</strong> with detailed action logging</li>
+                <li><strong>Travel agency management</strong> with delete capability</li>
+            </ul>
+            <h3>✨ Added</h3>
+            <ul>
+                <li><strong>Activity Logs Page</strong> (<code>/admin/logs</code>)
+                    <ul>
+                        <li>Filter by role (admin, manager, accountant)</li>
+                        <li>Search by category, message, URL, or IP</li>
+                        <li>Pagination (50 entries per page)</li>
+                        <li>Export to CSV functionality</li>
+                    </ul>
+                </li>
+                <li><strong>Travel Agency Management</strong>
+                    <ul>
+                        <li>Delete travel agencies with confirmation dialog</li>
+                        <li>Full audit logging of deletions (company name, email, ID)</li>
+                        <li>Permission-based access control</li>
+                    </ul>
+                </li>
+                <li><strong>Comprehensive Audit Logging</strong>
+                    <ul>
+                        <li>Withdrawal status updates</li>
+                        <li>Page creation, updates, and deletions</li>
+                        <li>User management (toggle status, delete)</li>
+                        <li>Travel agency deletions</li>
+                        <li>Finance dashboard access and exports</li>
+                        <li>Admin settings changes</li>
+                        <li>Login attempts (successful and failed)</li>
+                    </ul>
+                </li>
+                <li><strong>Role-based Activity Tracking</strong>
+                    <ul>
+                        <li>All admin-area actions tagged with user role</li>
+                        <li>Manager and accountant actions visible to super admin</li>
+                        <li>Detailed context for each logged action</li>
+                    </ul>
+                </li>
+            </ul>
+            <h3>🔧 Enhanced</h3>
+            <ul>
+                <li><strong>Admin Sidebar</strong> - Added "Activity Logs" link (admin only)</li>
+                <li><strong>Audit Trail</strong> - Extended logging to cover key administrative actions</li>
+                <li><strong>Security Monitoring</strong> - Better visibility into system usage patterns</li>
+            </ul>
+            <h3>🛡️ Security</h3>
+            <ul>
+                <li><strong>Access Control</strong> - Activity logs restricted to super admin only</li>
+                <li><strong>Audit Compliance</strong> - Complete trail of administrative actions</li>
+                <li><strong>Role Monitoring</strong> - Track manager and accountant activities</li>
+            </ul>
+        </section>
+
+        <section id="v101" class="card">
+            <h2>1.0.1 — Admin destination/agency editing + HTML changelog</h2>
+            <p class="muted">Minor feature release enabling destination and agency management from the Admin and improving changelog visibility.</p>
+            <h3>Added</h3>
+            <ul>
+                <li>Admin can edit Travel Destinations at <code>/admin/travel/destinations</code> with Edit, Publish/Unpublish, and Feature/Unfeature.</li>
+                <li>Admin can edit Travel Agencies at <code>/admin/travel/agencies</code> with profile fields, status flags, logo upload, and commission.</li>
+                <li>Introduced this styled HTML changelog page for quick in-app viewing.</li>
+                <li>Universal Scanner quick links added to Admin Scans, Organizer Dashboard, and Travel Dashboard.</li>
+                <li>Rich legal pages (Terms, Privacy, Refund) seeded and migration provided to update existing content.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+                <li>Admin dashboard footer link now points to <code>/changelog.html</code>.</li>
+                <li>CSRF protection added to admin edit/update forms; update endpoints now require POST and redirect on direct GET.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+                <li>QR code not rendering on booking/ticket pages when served via ngrok/HTTPS by proxying through <code>/qr.php</code> and updating all QR uses to the proxy.</li>
+                <li>Travel agency phone normalization on registration and profile update to avoid <code>+254 254...</code> duplication and ensure SMS/OTP delivery.</li>
+            </ul>
+        </section>
+
+        <section id="v100" class="card">
+            <h2>1.0.0 — First public release</h2>
+            <p class="muted">The initial stable release of Ticko featuring the full event ticketing, travel bookings, admin console, and universal scanner flows.</p>
+
+            <h3 id="highlights">Highlights</h3>
+            <ul>
+                <li>Modular PHP MVC architecture with secure middleware and installer.</li>
+                <li>Admin, Organizer, Travel portals with finance and withdrawals.</li>
+                <li>Universal web scanner + mobile app links managed from settings.</li>
+                <li>Email/SMS templating with SMTP and SMS providers.</li>
+            </ul>
+
+            <h3 id="added">Added</h3>
+            <ul>
+                <li>Core PHP MVC stack: front controller, lightweight router, autoloading.</li>
+                <li>Security middleware: secure session initialization, headers, CSRF helpers, suspicious activity checks.</li>
+                <li>Installer <code>public/install.php</code> and environment-driven configuration via <code>config/env.php</code>.</li>
+                <li>Admin console: events, users, organizers, travel agencies, banners, featured content, partner logos, pages CMS, notification templates, SMS templates, communications, finance dashboards, scans, scanner assignments, settings.</li>
+                <li>Organizer portal: dashboard, events CRUD, reports, finance, scanner devices, event scanner assignments, withdrawals.</li>
+                <li>Travel portal: destinations, public listings, destination pages, bookings and checkout, dashboard, finance, withdrawals, profile.</li>
+                <li>Universal scanner (web) with login and scan views.</li>
+                <li>Mobile scanner app links (Play Store / App Store) managed in Admin settings and surfaced in Organizer Dashboard and Travel Scanner.</li>
+                <li>Documentation under <code>docs/</code> (getting started, user/admin/organizer guides, templates, branding, scanner guides).</li>
+                <li>Sitemap generation and basic SEO helpers.</li>
+                <li>Backups and rate limit storage under <code>storage/</code>.</li>
+            </ul>
+
+            <h3 id="changed">Changed</h3>
+            <ul>
+                <li>Database configuration loads from <code>config/env.php</code> (supports host/port/socket) with resilient PDO connection attempts.</li>
+                <li>Admin settings: new “Apps” tab for <code>apps.android_scanner_url</code> and <code>apps.ios_scanner_url</code>.</li>
+                <li>Admin dashboard Quick Actions: added Universal Scanner shortcut.</li>
+                <li>Layouts and sidebars updated to remove deprecated marketing links.</li>
+                <li>Base URL generation improved to support root/subdirectory deployments and enforced HTTPS on ngrok.</li>
+            </ul>
+
+            <h3 id="removed">Removed</h3>
+            <ul>
+                <li>Marketing module (organizer/agency/admin) decommissioned:</li>
+                <li style="list-style:none; margin-left:20px;">• Routes disabled via <code>DisabledController@notFound</code>.</li>
+                <li style="list-style:none; margin-left:20px;">• UI links removed from admin, organizer, and travel sidebars.</li>
+                <li style="list-style:none; margin-left:20px;">• Legacy marketing views/services/migrations deleted.</li>
+            </ul>
+
+            <h3 id="fixed">Fixed</h3>
+            <ul>
+                <li>More robust router flow and security hardening.</li>
+                <li>Improved installer and environment bootstrap for production and development.</li>
+            </ul>
+
+            <h3 id="security">Security</h3>
+            <ul>
+                <li>Centralized session hardening, security headers, CSRF utilities.</li>
+                <li>Rate limiting service added.</li>
+                <li>Production security guide and audit report included.</li>
+            </ul>
+
+            <h3 id="modules">Modules Overview</h3>
+            <ul>
+                <li>Core: Router, middleware, helpers, env/config.</li>
+                <li>Auth: user/organizer/travel auth flows, password resets, OTP for organizers.</li>
+                <li>Users &amp; Orgs: models and admin management pages.</li>
+                <li>Events &amp; Tickets: listings, event CRUD for organizers, ticket view, featured content.</li>
+                <li>Payments &amp; Checkout: controllers and integration points (M-Pesa/PayPal/Flutterwave readiness).</li>
+                <li>Communications: SMTP Mailer, SMS service (Twilio/TextSMS), templates, admin composer.</li>
+                <li>Scanner: universal web scanner, admin scans and assignments, organizer devices, travel scanner pages.</li>
+                <li>Travel: destinations, public listing, bookings/checkout, dashboards, finance, withdrawals.</li>
+                <li>Finance: dashboards for admin/organizer/travel; withdrawals flows.</li>
+                <li>Content &amp; Partners: pages CMS, partner logos, banners.</li>
+                <li>Admin Settings: system settings including mobile app links.</li>
+                <li>Docs &amp; SEO: documentation and sitemap generation.</li>
+            </ul>
+        </section>
+
+        <div class="footer">© <?php echo date('Y'); ?> ShikaTicket · v1.0.1</div>
+    </div>
+</body>
+</html>
+

@@ -464,7 +464,7 @@ class PaymentController
             for ($i=0; $i<$qty; $i++) {
                 $code = substr(str_shuffle('0123456789'), 0, 6);
                 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($code);
-                $qrDir = __DIR__ . '/../../public/uploads/qrs';
+                $qrDir = __DIR__ . '/../../uploads/qrs';
                 if (!is_dir($qrDir)) { @mkdir($qrDir, 0777, true); }
                 $qrRel = 'uploads/qrs/' . $code . '.png';
                 $qrAbs = __DIR__ . '/../../public/' . $qrRel;
@@ -1051,7 +1051,7 @@ class PaymentController
                         $code = substr(str_shuffle('0123456789'), 0, 6);
                         // Create a local PNG by downloading from a reliable QR service
                         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($code);
-                        $qrDir = __DIR__ . '/../../public/uploads/qrs';
+                        $qrDir = __DIR__ . '/../../uploads/qrs';
                         if (!is_dir($qrDir)) { @mkdir($qrDir, 0777, true); }
                         $qrRel = 'uploads/qrs/' . $code . '.png';
                         $qrAbs = __DIR__ . '/../../public/' . $qrRel;

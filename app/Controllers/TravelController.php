@@ -118,7 +118,7 @@ class TravelController
 
             // Handle image upload
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../../public/uploads/travel/';
+                $uploadDir = __DIR__ . '/../../uploads/travel/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
@@ -134,7 +134,7 @@ class TravelController
             // Handle gallery uploads
             $galleryPaths = [];
             if (!empty($_FILES['gallery']['name']) && is_array($_FILES['gallery']['name'])) {
-                $uploadDir = __DIR__ . '/../../public/uploads/travel/';
+                $uploadDir = __DIR__ . '/../../uploads/travel/';
                 if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
                 foreach ($_FILES['gallery']['name'] as $idx => $name) {
                     if (($_FILES['gallery']['error'][$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) { continue; }
@@ -200,7 +200,7 @@ class TravelController
             $isPublished = isset($_POST['is_published']) ? 1 : 0; $updates[]='is_published=?'; $values[]=$isPublished;
             // Optional new image
             if (isset($_FILES['image']) && $_FILES['image']['error']===UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../../public/uploads/travel/'; if (!is_dir($uploadDir)) { mkdir($uploadDir,0777,true);} 
+                $uploadDir = __DIR__ . '/../../uploads/travel/'; if (!is_dir($uploadDir)) { mkdir($uploadDir,0777,true);} 
                 $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
                 $file = 'destination_' . time() . '_' . rand(1000,9999) . '.' . $ext; $destPath = $uploadDir . $file;
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $destPath)) { $updates[]='image_path=?'; $values[]='uploads/travel/' . $file; }
@@ -208,7 +208,7 @@ class TravelController
             // Optional gallery additions (append)
             $gallery = json_decode($dest['gallery_paths'] ?? '[]', true) ?: [];
             if (!empty($_FILES['gallery']['name']) && is_array($_FILES['gallery']['name'])) {
-                $uploadDir = __DIR__ . '/../../public/uploads/travel/'; if (!is_dir($uploadDir)) { mkdir($uploadDir,0777,true);} 
+                $uploadDir = __DIR__ . '/../../uploads/travel/'; if (!is_dir($uploadDir)) { mkdir($uploadDir,0777,true);} 
                 foreach ($_FILES['gallery']['name'] as $i=>$n) {
                     if (($_FILES['gallery']['error'][$i] ?? UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK) continue;
                     $ext = pathinfo($n, PATHINFO_EXTENSION);
@@ -269,7 +269,7 @@ class TravelController
 
             // Handle logo upload
             if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../../public/uploads/travel/agencies/';
+                $uploadDir = __DIR__ . '/../../uploads/travel/agencies/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }

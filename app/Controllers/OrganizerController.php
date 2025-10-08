@@ -206,7 +206,7 @@ class OrganizerController
 		$setAvatar = '';
 		if (!empty($_FILES['avatar']['tmp_name'])) {
 			$ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
-			$destDir = __DIR__ . '/../../public/uploads/avatars';
+			$destDir = __DIR__ . '/../../uploads/avatars';
 			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
 			$fn = 'org_' . $_SESSION['organizer_id'] . '_' . time() . '.' . $ext;
 			move_uploaded_file($_FILES['avatar']['tmp_name'], $destDir . '/' . $fn);

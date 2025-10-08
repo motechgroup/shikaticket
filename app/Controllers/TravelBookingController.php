@@ -707,7 +707,7 @@ class TravelBookingController
             // Generate and store local QR image (match events QR behavior)
             try {
                 // Ensure directory exists
-                $dir = __DIR__ . '/../../public/uploads/qrs/travel/';
+                $dir = __DIR__ . '/../../uploads/qrs/travel/';
                 if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
                 $qrPathRel = 'uploads/qrs/travel/' . $ticketCode . '.png';
                 $qrPathAbs = $dir . $ticketCode . '.png';

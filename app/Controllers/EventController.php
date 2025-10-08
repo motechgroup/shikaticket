@@ -86,7 +86,7 @@ class EventController
 
 			// Generate secure filename and upload
 			$filename = \App\Services\FileUploadService::generateSecureFilename($_FILES['poster']['name'], 'poster_');
-			$destDir = __DIR__ . '/../../public/uploads';
+			$destDir = __DIR__ . '/../../uploads';
 			$dest = $destDir . '/' . $filename;
 			
 			if (\App\Services\FileUploadService::moveUploadedFile($_FILES['poster']['tmp_name'], $dest)) {
@@ -155,7 +155,7 @@ class EventController
                 redirect(base_url('/organizer/events/edit?id=' . $id));
             }
             $ext = pathinfo($_FILES['poster']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads';
+            $destDir = __DIR__ . '/../../uploads';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'poster_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
             $dest = $destDir . '/' . $filename;

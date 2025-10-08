@@ -19,7 +19,7 @@
     $siteTitle = \App\Models\Setting::get('site.name', 'ShikaTicket'); 
     // Build favicon URL with cache-busting when file exists
     $faviconRel = ltrim($siteFavicon, '/');
-    $publicRoot = __DIR__ . '/../../public/';
+    $publicRoot = __DIR__ . '/../../';
     $absIcon = $publicRoot . $faviconRel;
     $faviconUrl = base_url($siteFavicon);
     if (@file_exists($absIcon)) {

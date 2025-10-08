@@ -536,7 +536,7 @@ class AdminController
 		$posterPath = null;
 		if (!empty($_FILES['poster']['tmp_name'])) {
 			$ext = pathinfo($_FILES['poster']['name'], PATHINFO_EXTENSION);
-			$destDir = __DIR__ . '/../../public/uploads';
+			$destDir = __DIR__ . '/../../uploads';
 			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
 			$filename = 'poster_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
 			$dest = $destDir . '/' . $filename;
@@ -589,7 +589,7 @@ class AdminController
                 redirect(base_url('/admin/banners/create'));
             }
 			$ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-			$destDir = __DIR__ . '/../../public/uploads/banners';
+			$destDir = __DIR__ . '/../../uploads/banners';
 			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
 			$filename = 'banner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
 			$dest = $destDir . '/' . $filename;
@@ -633,7 +633,7 @@ class AdminController
         $setImg = '';
         if (!empty($_FILES['image']['tmp_name'])) {
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/banners';
+            $destDir = __DIR__ . '/../../uploads/banners';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'banner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -693,7 +693,7 @@ class AdminController
 		$posterSet = '';
 		if (!empty($_FILES['poster']['tmp_name'])) {
 			$ext = pathinfo($_FILES['poster']['name'], PATHINFO_EXTENSION);
-			$destDir = __DIR__ . '/../../public/uploads';
+			$destDir = __DIR__ . '/../../uploads';
 			if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
 			$filename = 'poster_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
 			$dest = $destDir . '/' . $filename;
@@ -1202,7 +1202,7 @@ class AdminController
 		// Handle logo upload
 		$logoPath = null;
 		if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-			$uploadDir = __DIR__ . '/../../public/uploads/travel/agencies/';
+			$uploadDir = __DIR__ . '/../../uploads/travel/agencies/';
 			if (!is_dir($uploadDir)) {
 				mkdir($uploadDir, 0777, true);
 			}
@@ -1562,7 +1562,7 @@ class AdminController
         $imagePath = null;
         if (!empty($_FILES['image']['tmp_name'])) {
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/travel';
+            $destDir = __DIR__ . '/../../uploads/travel';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'destination_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -1574,7 +1574,7 @@ class AdminController
         // Handle gallery images
         $galleryPaths = [];
         if (!empty($_FILES['gallery']['name']) && is_array($_FILES['gallery']['name'])) {
-            $destDir = __DIR__ . '/../../public/uploads/travel';
+            $destDir = __DIR__ . '/../../uploads/travel';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             foreach ($_FILES['gallery']['name'] as $idx => $name) {
                 if (($_FILES['gallery']['error'][$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) { continue; }
@@ -1656,7 +1656,7 @@ class AdminController
         // Handle logo & favicon uploads
         if (!empty($_FILES['site_logo']['tmp_name'])) {
             $ext = pathinfo($_FILES['site_logo']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/site';
+            $destDir = __DIR__ . '/../../uploads/site';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'logo_' . time() . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -1665,7 +1665,7 @@ class AdminController
         }
         if (!empty($_FILES['site_favicon']['tmp_name'])) {
             $ext = pathinfo($_FILES['site_favicon']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/site';
+            $destDir = __DIR__ . '/../../uploads/site';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'favicon_' . time() . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -1681,7 +1681,7 @@ class AdminController
         Setting::set('seo.twitter', trim($_POST['seo_twitter'] ?? ''));
         if (!empty($_FILES['seo_og_image']['tmp_name'])) {
             $ext = pathinfo($_FILES['seo_og_image']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/site';
+            $destDir = __DIR__ . '/../../uploads/site';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'og_' . time() . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -2056,7 +2056,7 @@ class AdminController
             [$w,$h] = @getimagesize($_FILES['image']['tmp_name']) ?: [0,0];
             if ($w < 100 || $h < 50) { flash_set('error','Logo too small'); redirect(base_url('/admin/partner-logos/create')); }
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/partners';
+            $destDir = __DIR__ . '/../../uploads/partners';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'partner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -2096,7 +2096,7 @@ class AdminController
         $setImg = '';
         if (!empty($_FILES['image']['tmp_name'])) {
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $destDir = __DIR__ . '/../../public/uploads/partners';
+            $destDir = __DIR__ . '/../../uploads/partners';
             if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
             $filename = 'partner_' . time() . '_' . mt_rand(1000,9999) . '.' . $ext;
             $dest = $destDir . '/' . $filename;
@@ -2151,7 +2151,7 @@ class AdminController
         // Handle image upload
         $imagePath = '';
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../../public/uploads/travel/banners/';
+            $uploadDir = __DIR__ . '/../../uploads/travel/banners/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
@@ -2227,7 +2227,7 @@ class AdminController
 
         // Handle new image upload
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../../public/uploads/travel/banners/';
+            $uploadDir = __DIR__ . '/../../uploads/travel/banners/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
