@@ -9,10 +9,17 @@ class SitemapController
         $base = rtrim(base_url('/'), '/');
         $urls = [];
         $now = date('c');
+        
         // Static pages
         $urls[] = ['loc' => $base . '/', 'changefreq' => 'daily', 'priority' => '1.0'];
         $urls[] = ['loc' => $base . '/events', 'changefreq' => 'hourly', 'priority' => '0.9'];
-        $urls[] = ['loc' => $base . '/partners', 'changefreq' => 'weekly', 'priority' => '0.4'];
+        $urls[] = ['loc' => $base . '/travel', 'changefreq' => 'daily', 'priority' => '0.9'];
+        $urls[] = ['loc' => $base . '/partners', 'changefreq' => 'weekly', 'priority' => '0.6'];
+        $urls[] = ['loc' => $base . '/auth/login', 'changefreq' => 'monthly', 'priority' => '0.5'];
+        $urls[] = ['loc' => $base . '/auth/register', 'changefreq' => 'monthly', 'priority' => '0.5'];
+        $urls[] = ['loc' => $base . '/auth/organizer-register', 'changefreq' => 'monthly', 'priority' => '0.5'];
+        $urls[] = ['loc' => $base . '/hotels', 'changefreq' => 'weekly', 'priority' => '0.6'];
+        
         // CMS pages (if present)
         try {
             $pages = db()->query('SELECT slug, updated_at FROM pages WHERE is_published=1')->fetchAll();
@@ -25,6 +32,7 @@ class SitemapController
                 ];
             }
         } catch (\Throwable $e) {}
+        
         // Events
         try {
             $evs = db()->query('SELECT id, updated_at FROM events WHERE is_published=1 ORDER BY updated_at DESC')->fetchAll();
@@ -32,6 +40,19 @@ class SitemapController
                 $urls[] = [
                     'loc' => $base . '/events/show?id=' . (int)$ev['id'],
                     'lastmod' => !empty($ev['updated_at']) ? date('c', strtotime($ev['updated_at'])) : $now,
+                    'changefreq' => 'daily',
+                    'priority' => '0.8'
+                ];
+            }
+        } catch (\Throwable $e) {}
+        
+        // Travel Destinations
+        try {
+            $dests = db()->query('SELECT id, updated_at FROM travel_destinations WHERE is_published=1 ORDER BY updated_at DESC')->fetchAll();
+            foreach ($dests as $dest) {
+                $urls[] = [
+                    'loc' => $base . '/travel/destination?id=' . (int)$dest['id'],
+                    'lastmod' => !empty($dest['updated_at']) ? date('c', strtotime($dest['updated_at'])) : $now,
                     'changefreq' => 'daily',
                     'priority' => '0.8'
                 ];

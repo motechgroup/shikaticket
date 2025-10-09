@@ -15,6 +15,7 @@
                 <button type="button" class="tab-btn active" data-tab="general">General</button>
                 <button type="button" class="tab-btn" data-tab="contact">Contact Info</button>
                 <button type="button" class="tab-btn" data-tab="seo">SEO</button>
+                <button type="button" class="tab-btn" data-tab="analytics">Analytics</button>
                 <button type="button" class="tab-btn" data-tab="email">Email (SMTP)</button>
                 <button type="button" class="tab-btn" data-tab="sms">SMS</button>
                 <button type="button" class="tab-btn" data-tab="payments">Payments</button>
@@ -170,6 +171,70 @@
                     <?php endif; ?>
                 </div>
                 <div class="text-xs text-gray-400 mt-2">This is how your contact information will appear in the website footer</div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS SECTION -->
+        <div class="border-t pt-6" data-tab-panel="analytics" style="display:none">
+            <h2 class="font-semibold mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Analytics & Tracking
+            </h2>
+            <p class="text-sm text-gray-400 mb-4">Add tracking codes for analytics platforms like Google Analytics, Facebook Pixel, etc.</p>
+            
+            <!-- Google Analytics -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Google Analytics Measurement ID</label>
+                <input class="input" name="analytics_google_id" placeholder="G-XXXXXXXXXX or UA-XXXXXXXXX-X" value="<?php echo htmlspecialchars($settings['analytics.google.id'] ?? ''); ?>">
+                <div class="text-xs text-gray-400 mt-1">Format: G-XXXXXXXXXX (GA4) or UA-XXXXXXXXX-X (Universal Analytics)</div>
+            </div>
+            
+            <!-- Google Tag Manager -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Google Tag Manager ID</label>
+                <input class="input" name="analytics_gtm_id" placeholder="GTM-XXXXXXX" value="<?php echo htmlspecialchars($settings['analytics.gtm.id'] ?? ''); ?>">
+                <div class="text-xs text-gray-400 mt-1">Format: GTM-XXXXXXX</div>
+            </div>
+            
+            <!-- Facebook Pixel -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Facebook Pixel ID</label>
+                <input class="input" name="analytics_facebook_pixel_id" placeholder="1234567890123456" value="<?php echo htmlspecialchars($settings['analytics.facebook.pixel_id'] ?? ''); ?>">
+                <div class="text-xs text-gray-400 mt-1">Your Facebook Pixel ID (numeric)</div>
+            </div>
+            
+            <!-- Custom Head Code -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Custom Head Code</label>
+                <textarea class="textarea font-mono text-xs" name="analytics_head_code" rows="5" placeholder="<!-- Add any custom tracking code here (e.g., Hotjar, Clarity, etc.) -->"><?php echo htmlspecialchars($settings['analytics.head_code'] ?? ''); ?></textarea>
+                <div class="text-xs text-gray-400 mt-1">This code will be inserted before the closing &lt;/head&gt; tag. You can add any custom tracking scripts here.</div>
+            </div>
+            
+            <!-- Custom Body Code -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Custom Body Code</label>
+                <textarea class="textarea font-mono text-xs" name="analytics_body_code" rows="5" placeholder="<!-- Add any custom tracking code here (e.g., chat widgets, etc.) -->"><?php echo htmlspecialchars($settings['analytics.body_code'] ?? ''); ?></textarea>
+                <div class="text-xs text-gray-400 mt-1">This code will be inserted right after the opening &lt;body&gt; tag.</div>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+                <div class="flex gap-3">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="text-sm">
+                        <p class="text-blue-300 font-semibold mb-1">How This Works</p>
+                        <ul class="text-blue-200 space-y-1 list-disc list-inside">
+                            <li><strong>Google Analytics:</strong> Enter your GA4 Measurement ID (starts with G-) or Universal Analytics ID (starts with UA-)</li>
+                            <li><strong>Google Tag Manager:</strong> Enter your GTM container ID (starts with GTM-)</li>
+                            <li><strong>Facebook Pixel:</strong> Enter your numeric Pixel ID from Facebook Business Manager</li>
+                            <li><strong>Custom Code:</strong> Add any other tracking scripts (Hotjar, Microsoft Clarity, TikTok Pixel, etc.)</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 

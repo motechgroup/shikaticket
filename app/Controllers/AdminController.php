@@ -1693,6 +1693,13 @@ class AdminController
         Setting::set('apps.android_scanner_url', trim($_POST['apps_android_scanner_url'] ?? ''));
         Setting::set('apps.ios_scanner_url', trim($_POST['apps_ios_scanner_url'] ?? ''));
 
+        // Analytics
+        Setting::set('analytics.google.id', trim($_POST['analytics_google_id'] ?? ''));
+        Setting::set('analytics.gtm.id', trim($_POST['analytics_gtm_id'] ?? ''));
+        Setting::set('analytics.facebook.pixel_id', trim($_POST['analytics_facebook_pixel_id'] ?? ''));
+        Setting::set('analytics.head_code', trim($_POST['analytics_head_code'] ?? ''));
+        Setting::set('analytics.body_code', trim($_POST['analytics_body_code'] ?? ''));
+
         // SMTP
         Setting::set('smtp.host', trim($_POST['smtp_host'] ?? ''));
         Setting::set('smtp.port', trim($_POST['smtp_port'] ?? '587'));
